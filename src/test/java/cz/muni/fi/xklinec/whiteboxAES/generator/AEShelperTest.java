@@ -118,15 +118,22 @@ public class AEShelperTest extends TestCase {
     public void testHashChain() {
     	System.out.println("hashChain");
     	
-        //AEShelper a = new AEShelper();
-        //a.build(true);
+        byte key[] = new byte[]{
+            (byte)0x2b, (byte)0x7e, (byte)0x15, (byte)0x16,
+            (byte)0x28, (byte)0xae, (byte)0xd2, (byte)0xa6,
+            (byte)0xab, (byte)0xf7, (byte)0x15, (byte)0x88,
+            (byte)0x09, (byte)0xcf, (byte)0x4f, (byte)0x3c };
+    	
         
-        // test sample key schedule
-        //byte[] roundKey = a.keySchedule(AEShelper.testVect128_key, 16, false);
+        AEShelper a = new AEShelper();
+        a.build(true);
         
-        //for(int i=0; i<16; i++){
-        //    System.out.println(roundKey[AES.BYTES * AES.ROUNDS + i]);
-        //}
-        fail();
+        // test sample hash chain
+        byte[] roundKey = a.hashChain(key, 16, "Salt", false);
+        
+        for(int i=0; i<16; i++){
+            System.out.println(Integer.toHexString((int)roundKey[AES.BYTES * AES.ROUNDS + i]));
+        }
+        //fail();
     }
 }

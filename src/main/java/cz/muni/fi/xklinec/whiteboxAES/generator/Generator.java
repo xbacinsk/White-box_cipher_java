@@ -822,6 +822,8 @@ public class Generator {
         extc = ex;
         
         System.out.println("AES initialization");
+        AESh.createKeyDependentSboxes(key, keySize); //TODO
+        System.out.println("AES initialization done");
         AESh.build(encrypt);
         final GF2mField field = AESh.getField();
         
@@ -851,12 +853,12 @@ public class Generator {
 	
         
         //-------------------------------------------------------------------------------------------
-        //miesto Generate round keys s AESh.keySchedule() treba AESh.hashChain()
+        //TODO miesto Generate round keys s AESh.keySchedule() treba AESh.hashChain()
         //----------------------------------------------------------------------------------------
         
         // Generate round keys
         System.out.println("Computing key schedule ");
-        byte[] keySchedule = AESh.keySchedule(key, keySize, debug);
+        byte[] keySchedule = AESh.hashChain(key, keySize, "TheConstantSalt.", debug);
         StringBuilder sb = new StringBuilder();
         for(int i=0; i<keySchedule.length; i++){
             sb.append(String.format("0x%02X", keySchedule[i]));
@@ -1018,14 +1020,15 @@ public class Generator {
                         }
                         
               //---------------------------------------------------------------------------
-              //Miesto ByteSub s konstantnimi S-boxes treba S-boxes zavisle na kluci
+              //TODO Miesto ByteSub s konstantnymi S-boxes treba S-boxes zavisle na kluci
               //-------------------------------------------------------------------------
                         
                         // SBox transformation with dedicated AES for this round and section
                         // Encryption: ByteSub
                         // Decryption: ByteSubInv
-                        int tmpE = encrypt ? AESh.ByteSub(tmpGF2E) : AESh.ByteSubInv(tmpGF2E);
-
+                        //int tmpE = encrypt ? AESh.ByteSub(tmpGF2E) : AESh.ByteSubInv(tmpGF2E); //Independent S-box
+                        int tmpE = encrypt ? AESh.ByteSub(tmpGF2E, r, j) : AESh.ByteSubInv(tmpGF2E, r, j); //Key-dependent S-boxes
+                        
                         // Decryption case:
                         // T(x) = Sbox(x) + k
                         if (!encrypt) {

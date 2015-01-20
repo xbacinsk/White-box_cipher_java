@@ -28,6 +28,8 @@
  */
 package cz.muni.fi.xklinec.whiteboxAES.generator;
 
+import java.security.MessageDigest;
+
 import cz.muni.fi.xklinec.whiteboxAES.AES;
 import cz.muni.fi.xklinec.whiteboxAES.State;
 
@@ -107,6 +109,86 @@ public class AEShelper {
              (byte)0x06, (byte)0x7d, (byte)0x8d, (byte)0x8f, (byte)0x9e, (byte)0x24, (byte)0xec, (byte)0xc7}
     };
     
+    // Reed-Solomon code matrix - for derivation of the key bytes needed for key-dependent S-boxes
+    public static final byte rs[] = new byte[]{
+        (byte)0x01, (byte)0xa4, (byte)0x55, (byte)0x87, (byte)0x5a, (byte)0x58, (byte)0xdb, (byte)0x9e, 
+        (byte)0xa4, (byte)0x56, (byte)0x82, (byte)0xf3, (byte)0x1e, (byte)0xc6, (byte)0x68, (byte)0xe5,
+        (byte)0x02, (byte)0xa1, (byte)0xfc, (byte)0xc1, (byte)0x47, (byte)0xae, (byte)0x3d, (byte)0x19, 
+        (byte)0xa4, (byte)0x55, (byte)0x87, (byte)0x5a, (byte)0x58, (byte)0xdb, (byte)0x9e, (byte)0x01
+    };
+    
+    // Substitution tables needed for key-dependent S-boxes
+    protected static final byte q8x8[][]= new byte[][] {
+    	{
+    		(byte)0xA9, (byte)0x67, (byte)0xB3, (byte)0xE8, (byte)0x04, (byte)0xFD, (byte)0xA3, (byte)0x76, 
+    		(byte)0x9A, (byte)0x92, (byte)0x80, (byte)0x78, (byte)0xE4, (byte)0xDD, (byte)0xD1, (byte)0x38, 
+    		(byte)0x0D, (byte)0xC6, (byte)0x35, (byte)0x98, (byte)0x18, (byte)0xF7, (byte)0xEC, (byte)0x6C, 
+    		(byte)0x43, (byte)0x75, (byte)0x37, (byte)0x26, (byte)0xFA, (byte)0x13, (byte)0x94, (byte)0x48, 
+    		(byte)0xF2, (byte)0xD0, (byte)0x8B, (byte)0x30, (byte)0x84, (byte)0x54, (byte)0xDF, (byte)0x23, 
+    		(byte)0x19, (byte)0x5B, (byte)0x3D, (byte)0x59, (byte)0xF3, (byte)0xAE, (byte)0xA2, (byte)0x82, 
+    		(byte)0x63, (byte)0x01, (byte)0x83, (byte)0x2E, (byte)0xD9, (byte)0x51, (byte)0x9B, (byte)0x7C, 
+    		(byte)0xA6, (byte)0xEB, (byte)0xA5, (byte)0xBE, (byte)0x16, (byte)0x0C, (byte)0xE3, (byte)0x61, 
+    		(byte)0xC0, (byte)0x8C, (byte)0x3A, (byte)0xF5, (byte)0x73, (byte)0x2C, (byte)0x25, (byte)0x0B, 
+    		(byte)0xBB, (byte)0x4E, (byte)0x89, (byte)0x6B, (byte)0x53, (byte)0x6A, (byte)0xB4, (byte)0xF1, 
+    		(byte)0xE1, (byte)0xE6, (byte)0xBD, (byte)0x45, (byte)0xE2, (byte)0xF4, (byte)0xB6, (byte)0x66, 
+    		(byte)0xCC, (byte)0x95, (byte)0x03, (byte)0x56, (byte)0xD4, (byte)0x1C, (byte)0x1E, (byte)0xD7, 
+    		(byte)0xFB, (byte)0xC3, (byte)0x8E, (byte)0xB5, (byte)0xE9, (byte)0xCF, (byte)0xBF, (byte)0xBA, 
+    		(byte)0xEA, (byte)0x77, (byte)0x39, (byte)0xAF, (byte)0x33, (byte)0xC9, (byte)0x62, (byte)0x71, 
+    		(byte)0x81, (byte)0x79, (byte)0x09, (byte)0xAD, (byte)0x24, (byte)0xCD, (byte)0xF9, (byte)0xD8, 
+    		(byte)0xE5, (byte)0xC5, (byte)0xB9, (byte)0x4D, (byte)0x44, (byte)0x08, (byte)0x86, (byte)0xE7, 
+    		(byte)0xA1, (byte)0x1D, (byte)0xAA, (byte)0xED, (byte)0x06, (byte)0x70, (byte)0xB2, (byte)0xD2, 
+    		(byte)0x41, (byte)0x7B, (byte)0xA0, (byte)0x11, (byte)0x31, (byte)0xC2, (byte)0x27, (byte)0x90, 
+    		(byte)0x20, (byte)0xF6, (byte)0x60, (byte)0xFF, (byte)0x96, (byte)0x5C, (byte)0xB1, (byte)0xAB, 
+    		(byte)0x9E, (byte)0x9C, (byte)0x52, (byte)0x1B, (byte)0x5F, (byte)0x93, (byte)0x0A, (byte)0xEF, 
+    		(byte)0x91, (byte)0x85, (byte)0x49, (byte)0xEE, (byte)0x2D, (byte)0x4F, (byte)0x8F, (byte)0x3B, 
+    		(byte)0x47, (byte)0x87, (byte)0x6D, (byte)0x46, (byte)0xD6, (byte)0x3E, (byte)0x69, (byte)0x64, 
+    		(byte)0x2A, (byte)0xCE, (byte)0xCB, (byte)0x2F, (byte)0xFC, (byte)0x97, (byte)0x05, (byte)0x7A, 
+    		(byte)0xAC, (byte)0x7F, (byte)0xD5, (byte)0x1A, (byte)0x4B, (byte)0x0E, (byte)0xA7, (byte)0x5A, 
+    		(byte)0x28, (byte)0x14, (byte)0x3F, (byte)0x29, (byte)0x88, (byte)0x3C, (byte)0x4C, (byte)0x02, 
+    		(byte)0xB8, (byte)0xDA, (byte)0xB0, (byte)0x17, (byte)0x55, (byte)0x1F, (byte)0x8A, (byte)0x7D, 
+    		(byte)0x57, (byte)0xC7, (byte)0x8D, (byte)0x74, (byte)0xB7, (byte)0xC4, (byte)0x9F, (byte)0x72, 
+    		(byte)0x7E, (byte)0x15, (byte)0x22, (byte)0x12, (byte)0x58, (byte)0x07, (byte)0x99, (byte)0x34, 
+    		(byte)0x6E, (byte)0x50, (byte)0xDE, (byte)0x68, (byte)0x65, (byte)0xBC, (byte)0xDB, (byte)0xF8, 
+    		(byte)0xC8, (byte)0xA8, (byte)0x2B, (byte)0x40, (byte)0xDC, (byte)0xFE, (byte)0x32, (byte)0xA4, 
+    		(byte)0xCA, (byte)0x10, (byte)0x21, (byte)0xF0, (byte)0xD3, (byte)0x5D, (byte)0x0F, (byte)0x00, 
+    		(byte)0x6F, (byte)0x9D, (byte)0x36, (byte)0x42, (byte)0x4A, (byte)0x5E, (byte)0xC1, (byte)0xE0
+    	},
+    	{
+    		(byte)0x75, (byte)0xF3, (byte)0xC6, (byte)0xF4, (byte)0xDB, (byte)0x7B, (byte)0xFB, (byte)0xC8, 
+    		(byte)0x4A, (byte)0xD3, (byte)0xE6, (byte)0x6B, (byte)0x45, (byte)0x7D, (byte)0xE8, (byte)0x4B, 
+    		(byte)0xD6, (byte)0x32, (byte)0xD8, (byte)0xFD, (byte)0x37, (byte)0x71, (byte)0xF1, (byte)0xE1, 
+    		(byte)0x30, (byte)0x0F, (byte)0xF8, (byte)0x1B, (byte)0x87, (byte)0xFA, (byte)0x06, (byte)0x3F, 
+    		(byte)0x5E, (byte)0xBA, (byte)0xAE, (byte)0x5B, (byte)0x8A, (byte)0x00, (byte)0xBC, (byte)0x9D, 
+    		(byte)0x6D, (byte)0xC1, (byte)0xB1, (byte)0x0E, (byte)0x80, (byte)0x5D, (byte)0xD2, (byte)0xD5, 
+    		(byte)0xA0, (byte)0x84, (byte)0x07, (byte)0x14, (byte)0xB5, (byte)0x90, (byte)0x2C, (byte)0xA3, 
+    		(byte)0xB2, (byte)0x73, (byte)0x4C, (byte)0x54, (byte)0x92, (byte)0x74, (byte)0x36, (byte)0x51, 
+    		(byte)0x38, (byte)0xB0, (byte)0xBD, (byte)0x5A, (byte)0xFC, (byte)0x60, (byte)0x62, (byte)0x96, 
+    		(byte)0x6C, (byte)0x42, (byte)0xF7, (byte)0x10, (byte)0x7C, (byte)0x28, (byte)0x27, (byte)0x8C, 
+    		(byte)0x13, (byte)0x95, (byte)0x9C, (byte)0xC7, (byte)0x24, (byte)0x46, (byte)0x3B, (byte)0x70, 
+    		(byte)0xCA, (byte)0xE3, (byte)0x85, (byte)0xCB, (byte)0x11, (byte)0xD0, (byte)0x93, (byte)0xB8, 
+    		(byte)0xA6, (byte)0x83, (byte)0x20, (byte)0xFF, (byte)0x9F, (byte)0x77, (byte)0xC3, (byte)0xCC, 
+    		(byte)0x03, (byte)0x6F, (byte)0x08, (byte)0xBF, (byte)0x40, (byte)0xE7, (byte)0x2B, (byte)0xE2, 
+    		(byte)0x79, (byte)0x0C, (byte)0xAA, (byte)0x82, (byte)0x41, (byte)0x3A, (byte)0xEA, (byte)0xB9, 
+    		(byte)0xE4, (byte)0x9A, (byte)0xA4, (byte)0x97, (byte)0x7E, (byte)0xDA, (byte)0x7A, (byte)0x17, 
+    		(byte)0x66, (byte)0x94, (byte)0xA1, (byte)0x1D, (byte)0x3D, (byte)0xF0, (byte)0xDE, (byte)0xB3, 
+    		(byte)0x0B, (byte)0x72, (byte)0xA7, (byte)0x1C, (byte)0xEF, (byte)0xD1, (byte)0x53, (byte)0x3E, 
+    		(byte)0x8F, (byte)0x33, (byte)0x26, (byte)0x5F, (byte)0xEC, (byte)0x76, (byte)0x2A, (byte)0x49, 
+    		(byte)0x81, (byte)0x88, (byte)0xEE, (byte)0x21, (byte)0xC4, (byte)0x1A, (byte)0xEB, (byte)0xD9, 
+    		(byte)0xC5, (byte)0x39, (byte)0x99, (byte)0xCD, (byte)0xAD, (byte)0x31, (byte)0x8B, (byte)0x01, 
+    		(byte)0x18, (byte)0x23, (byte)0xDD, (byte)0x1F, (byte)0x4E, (byte)0x2D, (byte)0xF9, (byte)0x48, 
+    		(byte)0x4F, (byte)0xF2, (byte)0x65, (byte)0x8E, (byte)0x78, (byte)0x5C, (byte)0x58, (byte)0x19, 
+    		(byte)0x8D, (byte)0xE5, (byte)0x98, (byte)0x57, (byte)0x67, (byte)0x7F, (byte)0x05, (byte)0x64, 
+    		(byte)0xAF, (byte)0x63, (byte)0xB6, (byte)0xFE, (byte)0xF5, (byte)0xB7, (byte)0x3C, (byte)0xA5, 
+    		(byte)0xCE, (byte)0xE9, (byte)0x68, (byte)0x44, (byte)0xE0, (byte)0x4D, (byte)0x43, (byte)0x69, 
+    		(byte)0x29, (byte)0x2E, (byte)0xAC, (byte)0x15, (byte)0x59, (byte)0xA8, (byte)0x0A, (byte)0x9E, 
+    		(byte)0x6E, (byte)0x47, (byte)0xDF, (byte)0x34, (byte)0x35, (byte)0x6A, (byte)0xCF, (byte)0xDC, 
+    		(byte)0x22, (byte)0xC9, (byte)0xC0, (byte)0x9B, (byte)0x89, (byte)0xD4, (byte)0xED, (byte)0xAB, 
+    		(byte)0x12, (byte)0xA2, (byte)0x0D, (byte)0x52, (byte)0xBB, (byte)0x02, (byte)0x2F, (byte)0xA9, 
+    		(byte)0xD7, (byte)0x61, (byte)0x1E, (byte)0xB4, (byte)0x50, (byte)0x04, (byte)0xF6, (byte)0xC2, 
+    		(byte)0x16, (byte)0x25, (byte)0x86, (byte)0x56, (byte)0x55, (byte)0x09, (byte)0xBE, (byte)0x91
+    		}
+    };
+    
     protected GF2mField field;
     protected int g[]             = new int[AES_FIELD_SIZE];
     protected int gInv[]          = new int[AES_FIELD_SIZE];
@@ -114,6 +196,16 @@ public class AEShelper {
     protected int sboxAffine[]    = new int[AES_FIELD_SIZE];
     protected int sboxAffineInv[] = new int[AES_FIELD_SIZE];
     
+    // TODO 10 = number of rounds (+1) for 128bit key
+	int s0_k0_k1[][] = new int[10][AES_FIELD_SIZE];
+	int s1_k2_k3[][] = new int[10][AES_FIELD_SIZE];
+	int s2_k4_k5[][] = new int[10][AES_FIELD_SIZE];
+	int s3_k6_k7[][] = new int[10][AES_FIELD_SIZE];
+	int s0_k0_k1_inv[][] = new int[10][AES_FIELD_SIZE];
+	int s1_k2_k3_inv[][] = new int[10][AES_FIELD_SIZE];
+	int s2_k4_k5_inv[][] = new int[10][AES_FIELD_SIZE];
+	int s3_k6_k7_inv[][] = new int[10][AES_FIELD_SIZE];
+	
     protected int mixColModulus[]      = new int[5];
     protected int mixColMultiply[]     = new int[4];
     protected int mixColMultiplyInv[]  = new int[4];
@@ -169,8 +261,10 @@ public class AEShelper {
             GF2MatrixEx resMatrix = (GF2MatrixEx) afM.rightMultiply(tmpM);
             tmpRes = (byte) field.add(NTLUtils.colBinaryVectorToByte(resMatrix, 0, 0), afC) & 0xff;
             
-            sboxAffine[i] = tmpRes;
-            sboxAffineInv[tmpRes] = i;
+            
+            // TODO S-box was created here, key-dependent S-boxes must be created before this function call
+            //sboxAffine[i] = tmpRes; //will be deleted
+            //sboxAffineInv[tmpRes] = i; //will be deleted
 
             // Inversion, idea is the same, i is the long representation of element in GF, apply inverted affine transformation and take inverse
             // Ax^{-1} + c is input to this transformation
@@ -398,7 +492,9 @@ public class AEShelper {
     }
     
     /**
-     * Hash chain using bcrypt.
+     * TODO 256bit key - but AES.ROUNDS is set to 10, what means only 128bit key, so this isn't needed
+     * 
+     * Hash chain using scrypt - only for 128-bit keys.
      * Used instead of the reversible Rijndael Key Schedule.
      * 
      * @param key
@@ -406,36 +502,176 @@ public class AEShelper {
      * @param debug
      * @return
      */
-    public byte[] hashChain(byte[] key, int size, boolean debug) {
+    public byte[] hashChain(byte[] key, int size, String saltString, boolean debug) {
     	
     	int currentSize = 0;
-    	int roundKeySize = 4*State.COLS; //nechat takto?
-    	int i,j;
+    	int i;
     	int roundKeysSize = getRoundKeysSize(size);
-    	
-    	System.out.println("------------------------------------------------------------------");
-    	System.out.println("\n\nsize = " + size + ", roundKeySize = " + roundKeySize + ".\n\n");
-    	System.out.println("------------------------------------------------------------------");
-    	
+    	int roundsNum = getNumberOfRounds(size);
+    	    	
     	byte[] roundKeys = new byte[roundKeysSize];
-    	byte[] tmpKey = new byte[roundKeySize];
-    	byte[] salt = new byte[]{'S', 'a', 'l', 't'};
+    	byte[] tmpKey = new byte[size];
+    	byte[] salt = saltString.getBytes();
     	
-    	for(i = 0; i<size; i++)
-    			tmpKey[i] = key[i];
+    	System.arraycopy(key, 0, tmpKey, 0, size);
     	
-    	//SCrypt scryptHash = new SCrypt();
-    	
-    	for(i = 0; i < getNumberOfRounds(size) + 1; i++) {
-    		tmpKey = SCrypt.generate(tmpKey, salt, 16, 1, 1, roundKeySize); //zmenit parametre, posledny je size? + key -> tmpKey
+    	for(i = 0; i < roundsNum + 1; i++) {
     		
-    		for(j = 0; j<roundKeySize; j++)
-    			roundKeys[currentSize + j] = tmpKey[j];
-    		currentSize += roundKeySize;    	
+    		if(i == 0)
+    			//tmpKey = SCrypt.generate(key, salt, 16, 1, 1, size);
+    			tmpKey = hashFunction(key, salt, size, 0/*N_bc for bcrypt*/, 0);
+    		else {
+	    		byte[] hashInput = new byte[2*size];
+	    		System.arraycopy(tmpKey, 0, hashInput, 0, size);
+	    		System.arraycopy(key, 0, hashInput, size, size);
+	    		
+	    		//tmpKey = SCrypt.generate(hashInput, salt, 16, 1, 1, size);
+	    		tmpKey = hashFunction(hashInput, salt, size, 0/*N_bc for bcrypt*/, 0);
+    		}
+    		
+    		System.arraycopy(tmpKey, 0, roundKeys, currentSize, size);
+    		currentSize += size;
     	}
-    	
     	return roundKeys;
     }
+    
+    /**
+     * Hash function with SHA256 applied on the input.
+     * 
+     * @param input
+     * @param salt
+     * @param size size of the output
+     * @param n_bc work load for bcrypt - for now not used
+     * @param n_sha number of sha256 applications
+     * @return
+     */
+    private byte[] hashFunction(byte[] input, byte[] salt, int size, int n_bc, int n_sha) {
+    	int i;
+    	byte[] tmpInput = new byte[input.length];
+    	System.arraycopy(input, 0, tmpInput, 0, input.length);
+    	
+    	for(i = 0; i < n_sha; i++) {
+    		try {
+	    		MessageDigest md = MessageDigest.getInstance("SHA-256"); //SHA256 in Dusan's thesis
+	    		md.update(tmpInput);
+	    		tmpInput = md.digest();
+    		} catch(Exception e) { //NoSuchAlgorithmException
+    			System.out.println("Problem with SHA256 in hashFunction (used in hashChain).");
+    		}
+    	}
+    	
+    	return SCrypt.generate(tmpInput, salt, 16, 1, 1, size);
+    }
+    
+    /**
+     * TODO S-boxes for keys longer than 128 bits (i.e. 192, 256) - this is not needed, because AES.ROUNDS is set to 10 (i.e. 128bit keys only)
+     * 
+     * Key-dependent (Twofish) S-boxes (and their inversions)
+     * 
+     * @param key
+     * @param size size of the given key
+     * @return
+     */
+    public void createKeyDependentSboxes(byte[] key, int size) {
+    	int i, r;
+    	
+    	byte[] magicConstant = new byte[] {'M','a','g','i','c','C','o','n','s','t','a','n','t'};
+    	byte[] input = new byte[key.length + magicConstant.length];
+    	System.arraycopy(key, 0, input, 0, key.length);
+    	System.arraycopy(magicConstant, 0, input, key.length, magicConstant.length);
+    	
+        byte[] roundKeysForSboxes = hashChain(input, size, "TheConstantSalt.", false);
+    	
+    	for(r = 0; r<roundKeysForSboxes.length/size-1; r++) {
+    		
+    		byte[] roundKey = new byte[size];
+    		System.arraycopy(roundKeysForSboxes, size*r, roundKey, 0, size);
+        	byte key_bytes[][] = keyBytesDerivation(roundKey, size);
+    		
+	    	for(i = 0; i<256; i++) {
+		    	
+		    	s0_k0_k1[r][i] = (int)q8x8[1][((int)q8x8[0][((int)q8x8[0][i] & 0xff) ^ ((int)key_bytes[0][0] & 0xff)] & 0xff) ^ ((int)key_bytes[1][0] & 0xff)] & 0xff; //What with the DWORDs?
+		    	s1_k2_k3[r][i] = (int)q8x8[0][((int)q8x8[0][((int)q8x8[1][i] & 0xff) ^ ((int)key_bytes[0][1] & 0xff)] & 0xff) ^ ((int)key_bytes[1][1] & 0xff)] & 0xff;
+		    	s2_k4_k5[r][i] = (int)q8x8[1][((int)q8x8[1][((int)q8x8[0][i] & 0xff) ^ ((int)key_bytes[0][2] & 0xff)] & 0xff) ^ ((int)key_bytes[1][2] & 0xff)] & 0xff;
+		    	s3_k6_k7[r][i] = (int)q8x8[0][((int)q8x8[1][((int)q8x8[1][i] & 0xff) ^ ((int)key_bytes[0][3] & 0xff)] & 0xff) ^ ((int)key_bytes[1][3] & 0xff)] & 0xff;
+	
+		    	s0_k0_k1_inv[9-r][s0_k0_k1[r][i]] = i;
+		    	s1_k2_k3_inv[9-r][s1_k2_k3[r][i]] = i;
+		    	s2_k4_k5_inv[9-r][s2_k4_k5[r][i]] = i;
+		    	s3_k6_k7_inv[9-r][s3_k6_k7[r][i]] = i;
+	    	}
+    	}
+    }
+    
+    /**
+     * Derivation of the exact key bytes for key-dependent S-boxes (according to [Twofish: A 128-Bit Block Cipher])
+     * 
+     * @param key original key
+     * @param keySize size of the given key (in bytes)
+     */
+    private byte[][] keyBytesDerivation(byte[] key, int keySize) {
+    	int i, m, j;
+    	byte s[][] = new byte[keySize/8][4];
+    	
+    	for(i = 0; i<keySize/8; i++) {
+    		for(m = 0; m<8; m++) {
+    			for(j = 0; j<4; j++) {
+    				s[i][j] += (rs[8*j+m] & 0xff) * (key[8*i+m] & 0xff);
+    			}
+    		}
+    	}
+    	return s;
+    }
+    
+    /**
+     * TODO this method - it is not used, may be deleted
+     * 
+     * Key-dependent S-boxes on whole state array.
+     * @param state 
+     */
+    public void ByteSubKeyDependent(State state) {
+        int i, j;
+        for (i = 0; i < State.ROWS; i++) {
+            for (j = 0; j < State.COLS; j++) {
+                state.set((byte) sboxAffine[state.get(i, j)], i, j);
+            }
+        }
+    }
+    
+    /**
+     * TODO rename this method
+     * 
+     * Key-dependent S-boxes on one byte.
+     * @param state 
+     */
+    public int ByteSub(int e, int round, int column) {
+        
+    	switch(column) {
+    		case 0: return s0_k0_k1[round][AES.posIdx(e)];
+    		case 1: return s1_k2_k3[round][AES.posIdx(e)];
+    		case 2: return s2_k4_k5[round][AES.posIdx(e)];
+    		case 3: return s3_k6_k7[round][AES.posIdx(e)];   	
+    	}
+    	return 0; //TODO skontrolovat, ci sa to niekedy nestane
+    }
+    
+    /**
+     * TODO rename this method
+     * 
+     * Key-dependent S-boxes on one byte.
+     * @param state 
+     */
+    public int ByteSubInv(int e, int round, int column) {
+        
+    	switch(column) {
+    		case 0: return s0_k0_k1_inv[round][AES.posIdx(e)];
+    		case 1: return s1_k2_k3_inv[round][AES.posIdx(e)];
+    		case 2: return s2_k4_k5_inv[round][AES.posIdx(e)];
+    		case 3: return s3_k6_k7_inv[round][AES.posIdx(e)];   	
+    	}
+    	return 0; //TODO skontrolovat, ci sa to niekedy nestane
+    }
+    
 
     /**
      * AES S-box.
