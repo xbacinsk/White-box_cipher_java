@@ -35,6 +35,7 @@ package cz.muni.fi.xklinec.whiteboxAES.generator;
 public class InternalBijections {
     private LinearBijection MB_L08x08[][]  = new LinearBijection[Generator.MB_CNT_08x08_ROUNDS][Generator.MB_CNT_08x08_PER_ROUND];
     private LinearBijection MB_MB32x32[][] = new LinearBijection[Generator.MB_CNT_32x32_ROUNDS][Generator.MB_CNT_32x32_PER_ROUND];
+    private LinearBijection MB_MB128x128[][] = new LinearBijection[Generator.MB_CNT_32x32_ROUNDS][Generator.MB_CNT_32x32_PER_ROUND*4];//TODO
     private Bijection4x4[] pCoding04x04    = null; // needs to be initialized on demand...
     
     /**
@@ -50,6 +51,13 @@ public class InternalBijections {
         for(int r=0; r<Generator.MB_CNT_32x32_ROUNDS; r++){
             for(int i=0; i<Generator.MB_CNT_32x32_PER_ROUND; i++){
                 MB_MB32x32[r][i] = new LinearBijection();
+            }
+        }
+        
+        //TODO
+        for(int r=0; r<Generator.MB_CNT_32x32_ROUNDS; r++){
+            for(int i=0; i<Generator.MB_CNT_32x32_PER_ROUND*4; i++){
+                MB_MB128x128[r][i] = new LinearBijection();
             }
         }
     }
@@ -75,6 +83,14 @@ public class InternalBijections {
 
     public void setMB_MB32x32(LinearBijection[][] MB_MB32x32) {
         this.MB_MB32x32 = MB_MB32x32;
+    }
+    
+    public LinearBijection[][] getMB_MB128x128() {
+        return MB_MB128x128;
+    }
+
+    public void setMB_MB128x128(LinearBijection[][] MB_MB128x128) {
+        this.MB_MB128x128 = MB_MB128x128;
     }
 
     public Bijection4x4[] getpCoding04x04() {

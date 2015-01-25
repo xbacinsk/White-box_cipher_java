@@ -580,6 +580,7 @@ public class Generator {
 	int r,i;
         LinearBijection[][] L08x08  = io.getMB_L08x08();
         LinearBijection[][] MB32x32 = io.getMB_MB32x32();
+        LinearBijection[][] MB128x128 = io.getMB_MB128x128();
 
 	// Generate all required 8x8 mixing bijections.
 	for (r = 0; r < L08x08rounds; r++) {
@@ -609,6 +610,22 @@ public class Generator {
                 } else {
                     MB32x32[r][i].setMb( new GF2MatrixEx(32, GF2MatrixEx.MATRIX_TYPE_UNIT));
                     MB32x32[r][i].setInv(new GF2MatrixEx(32, GF2MatrixEx.MATRIX_TYPE_UNIT));
+                }
+            }
+        }
+        
+    	// Generate all required 128x128 mixing bijections.
+        for (r = 0; r < MB32x32rounds; r++) {
+            for (i = 0; i < MB_CNT_32x32_PER_ROUND*4; i++) {
+                if (!MB32x32Identity) { //TODO 128x128?
+                    final GF2MatrixEx m    = MixingBijection.generateMixingBijection(128, 4, rand, debug);
+                    final GF2MatrixEx minv = (GF2MatrixEx) m.computeInverse();
+
+                    MB128x128[r][i].setMb(m);
+                    MB128x128[r][i].setInv(minv);
+                } else {
+                    MB128x128[r][i].setMb( new GF2MatrixEx(128, GF2MatrixEx.MATRIX_TYPE_UNIT));
+                    MB128x128[r][i].setInv(new GF2MatrixEx(128, GF2MatrixEx.MATRIX_TYPE_UNIT));
                 }
             }
         }
@@ -825,7 +842,7 @@ public class Generator {
         AESh.createKeyDependentSboxes(key, keySize); //TODO
         System.out.println("AES initialization done");
         AESh.build(encrypt);
-        final GF2mField field = AESh.getField();
+        final GF2mField field = AESh.getField(); //new GF2mField(8, POLYNOMIAL)
         
         // Create coding map. This step is always constant for each AES
         // but can be modified during debuging new features (enable/disable bijections).
@@ -876,6 +893,7 @@ public class Generator {
         // pre-load bijections
         final LinearBijection[][] eMB_L08x08 = io.getMB_L08x08();
         final LinearBijection[][] eMB_MB32x32 = io.getMB_MB32x32();
+        final LinearBijection[][] eMB_MB128x128 = io.getMB_MB128x128();
         final GTBox8to128[][] t1C = AESMap.getT1();
         final GTBox8to32[][] t2C  = AESMap.getT2();
         final GTBox8to32[][] t3C  = AESMap.getT3();        
@@ -1020,7 +1038,7 @@ public class Generator {
                         }
                         
               //---------------------------------------------------------------------------
-              //TODO Miesto ByteSub s konstantnymi S-boxes treba S-boxes zavisle na kluci
+              //TODO Miesto ByteSub s konstantnymi S-boxes treba S-boxes zavisle na kluci - DONE
               //-------------------------------------------------------------------------
                         
                         // SBox transformation with dedicated AES for this round and section
@@ -1063,6 +1081,13 @@ public class Generator {
                             t1[1][idx].getTbl()[b].setState(mapResult128.getState());
                             continue;
                         }
+/*
+          //TODO miesto MixColumn s maticou 4x4 treba hodit nasobenie maticou MDS16x16 - tu je treba niekde na zaciatku vyrobit (createMDS16x16())
+                        GF2mMatrixEx zj = new GF2mMatrixEx(field, 16, 1);
+                        zj.set(4*i+j, 0, tmpE); //ak sa to zapisuje po stlpcoch, inak 4*j+i TODO zistit
+                        mcres = r < (AES.ROUNDS - 1) ? AESh.getMDS16x16Mat().rightMultiply(zj) : zj;
+*/
+                        
 
                         //
                         // MixColumn, Mixing bijection part

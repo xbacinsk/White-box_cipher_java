@@ -4,7 +4,10 @@
  */
 package cz.muni.fi.xklinec.whiteboxAES.generator;
 
+import org.bouncycastle.pqc.math.linearalgebra.GF2mField;
+
 import cz.muni.fi.xklinec.whiteboxAES.AES;
+import cz.muni.fi.xklinec.whiteboxAES.State;
 import junit.framework.TestCase;
 
 /*
@@ -116,7 +119,7 @@ public class AEShelperTest extends TestCase {
     }
     
     public void testHashChain() {
-    	System.out.println("hashChain");
+    	System.out.println("test hashChain");
     	
         byte key[] = new byte[]{
             (byte)0x2b, (byte)0x7e, (byte)0x15, (byte)0x16,
@@ -135,5 +138,102 @@ public class AEShelperTest extends TestCase {
             System.out.println(Integer.toHexString((int)roundKey[AES.BYTES * AES.ROUNDS + i]));
         }
         //fail();
+    }
+    
+    public void testIndependentMDS16x16() {
+    	System.out.println("test Independent (constant) MDS16x16");
+
+        AEShelper a = new AEShelper();
+        a.build(true);
+    	
+    	a.createMDS16x16();
+    	int matrixInt[][] = a.getMDS16x16();
+    	byte matrixByte[][] = new byte[16][16];
+    	
+    	for(int i = 0; i<16; i++)
+    		for(int j = 0; j<16; j++)
+    			matrixByte[i][j] = (byte)matrixInt[i][j];
+    	
+    	for(int i = 0; i<16; i++) {
+    		State matrixRow  = new State(matrixByte[i], true,  false);
+    		System.out.println(i + ": " + matrixRow.toString());
+    	}
+    }
+    
+    public void testKeyDependentMDS16x16() {
+    	System.out.println("test Key-dependent MDS16x16");
+
+        byte key[] = new byte[]{
+                (byte)0x2b, (byte)0x7e, (byte)0x15, (byte)0x16,
+                (byte)0x28, (byte)0xae, (byte)0xd2, (byte)0xa6,
+                (byte)0xab, (byte)0xf7, (byte)0x17, (byte)0x88, //(byte)0xab, (byte)0xf7, (byte)0x15, (byte)0x88, 
+                (byte)0x09, (byte)0xcf, (byte)0x4f, (byte)0x3c };
+
+        AEShelper a = new AEShelper();
+        a.build(true);
+    	
+    	a.createMDS16x16(key);
+    	int matrixInt[][] = a.getMDS16x16();
+    	byte matrixByte[][] = new byte[16][16];
+    	
+    	for(int i = 0; i<16; i++)
+    		for(int j = 0; j<16; j++)
+    			matrixByte[i][j] = (byte)matrixInt[i][j];
+    	
+    	for(int i = 0; i<16; i++) {
+    		State matrixRow  = new State(matrixByte[i], true,  false);
+    		System.out.println(i + ": " + matrixRow.toString());
+    	}
+    }
+
+    public void testIndependentMDS16x16Inverse() {
+    	System.out.println("test Independent (constant) MDS16x16 - multiplicated by inverse");
+
+    	int i,c;
+    	GF2mField field = new GF2mField(8, 0x11B);
+    	
+        AEShelper a = new AEShelper();
+        a.build(true);
+    	
+    	a.createMDS16x16();
+
+    	int MDS16x16[][] = a.getMDS16x16();
+    	GF2mMatrixEx MDS16x16Mat = new GF2mMatrixEx(field, 16, 16);
+		for(i=0; i<16; i++){
+            for(c=0; c<16; c++){
+            	MDS16x16Mat.set(i, c, MDS16x16[i][c]);
+            }
+		}
+		
+		GF2mMatrixEx shouldBeI = MDS16x16Mat.rightMultiply(MDS16x16Mat);
+		System.out.println(shouldBeI.toString());
+    }
+    
+    public void testKeyDependentMDS16x16Inverse() {
+    	System.out.println("test Key-dependent MDS16x16 - multiplicated by inverse");
+    	
+    	int i,c;
+    	GF2mField field = new GF2mField(8, 0x11B);
+    	
+        byte key[] = new byte[]{
+                (byte)0x2b, (byte)0x7e, (byte)0x15, (byte)0x16,
+                (byte)0x28, (byte)0xae, (byte)0xd2, (byte)0xa6,
+                (byte)0xab, (byte)0xf7, (byte)0x17, (byte)0x88, //(byte)0xab, (byte)0xf7, (byte)0x15, (byte)0x88, 
+                (byte)0x09, (byte)0xcf, (byte)0x4f, (byte)0x3c };
+
+        AEShelper a = new AEShelper();
+        a.build(true);
+    	
+    	a.createMDS16x16(key);
+    	int MDS16x16[][] = a.getMDS16x16();
+    	GF2mMatrixEx MDS16x16Mat = new GF2mMatrixEx(field, 16, 16);
+		for(i=0; i<16; i++){
+            for(c=0; c<16; c++){
+            	MDS16x16Mat.set(i, c, MDS16x16[i][c]);
+            }
+		}
+		
+		GF2mMatrixEx shouldBeI = MDS16x16Mat.rightMultiply(MDS16x16Mat);
+		System.out.println(shouldBeI.toString());
     }
 }
