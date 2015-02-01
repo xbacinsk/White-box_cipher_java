@@ -194,7 +194,7 @@ public class GeneratorTest extends TestCase {
                     // generate random long for T3 identity testing
                     byte[] cires = new byte[4];
                     rand.nextBytes(cires);
-                    
+                    /*
                     // Apply T3 boxes, valid XOR results are in ires[0], ires[4], ires[8], ires[12]
                     // Start from the end, because in ires[i] is our XORing result.
                     ires[12+i].set(AESenc.getT3()[r][12+i].lookup(cires[3]));
@@ -208,7 +208,7 @@ public class GeneratorTest extends TestCase {
                         ires[ 4+i].getLong(), 
                         ires[ 8+i].getLong(), 
                         ires[12+i].getLong()));
-
+*/
                     // assert equality - T3+xor identity
                     assertEquals("T3 box should be identity but is not", true, Arrays.equals(cires, ires[i].get()));
                 }

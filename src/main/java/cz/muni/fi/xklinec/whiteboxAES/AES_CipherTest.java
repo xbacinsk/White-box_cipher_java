@@ -76,10 +76,8 @@ public class AES_CipherTest extends TestCase {
 		} catch (Exception e) {}
 		
         State plain  = new State(AEShelper.testVect128_plain[1], true,  false);
-        State cipher = new State(AEShelper.testVect128_cipher[1], true, false);
 		
 		System.out.println("Testvector plaintext sour: \n" + plain);
-        System.out.println("Testvector ciphertext sour: \n"+ cipher);
 
         State cipher2  = new State(outputEnc, true, false);
         State plain2 = new State(outputDec, true, false);
@@ -187,7 +185,9 @@ public class AES_CipherTest extends TestCase {
 			encryptor.engineInit(Cipher.ENCRYPT_MODE, key, random);
 			
 			outputEnc = encryptor.engineDoFinal(AEShelper.testVect128_plain[1], 0, 16);
-		} catch (Exception e) {}
+		} catch (Exception e) {
+			System.out.println("Exception " + e.getMessage());
+		}
 		
 		try {
 			SecureRandom random = new SecureRandom();
@@ -205,7 +205,9 @@ public class AES_CipherTest extends TestCase {
 			
 			assertEquals("Plaintext output mismatch in API", true, plain_comp.equals(plain_sour));
 			
-		} catch (Exception e) {}
+		} catch (Exception e) {
+			System.out.println("Exception " + e.getMessage());
+		}
 	}
 		
 	/**

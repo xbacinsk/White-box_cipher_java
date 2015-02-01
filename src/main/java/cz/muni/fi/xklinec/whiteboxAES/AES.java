@@ -59,9 +59,11 @@ public class AES implements Serializable {
         
     protected T1Box[][]         t1       = new T1Box[T1BOXES][State.BYTES];
     protected XORCascadeState[] xorState = new XORCascadeState[T1BOXES];
+    protected XORCascadeState[] xorState2 = new XORCascadeState[ROUNDS];
+    protected XORCascadeState[] xorState3 = new XORCascadeState[ROUNDS];
     protected T2Box[][]         t2       = new T2Box[ROUNDS][State.BYTES];
     protected T3Box[][]         t3       = new T3Box[ROUNDS][State.BYTES];
-    protected XORCascade[][]    xor      = new XORCascade[ROUNDS][2*State.COLS];
+    //protected XORCascade[][]    xor      = new XORCascade[ROUNDS][State.BYTES];
     private boolean           encrypt  = true;
 
     public static int posIdx(byte x){
@@ -78,14 +80,19 @@ public class AES implements Serializable {
      */
     public State crypt(State state){
         int r=0, i=0;
-	W32b  ires[] = new W32b[BYTES];	// intermediate result for T2,T3-boxes
+	State ires3[] = new State[BYTES];	// intermediate result for T2,T3-boxes
+	State ires2[] = new State[BYTES];	// intermediate result for T2,T3-boxes
 	State ares[] = new State[BYTES];	// intermediate result for T1-boxes
         
         // initialize ires, ares at first
         for(i=0; i<BYTES; i++){
-            ires[i] = new W32b();
+            ires3[i] = new State();
+            ires2[i] = new State();
             ares[i] = new State();
         }
+        /*
+        System.out.println("line 94");
+        System.out.println(state);*/
         
         // At first we have to put input to T1 boxes directly, no shift rows
 	// compute result to ares[16]
@@ -97,6 +104,9 @@ public class AES implements Serializable {
         // now compute XOR cascade from 16 x 128bit result after T1 application.
         xorState[0].xor(ares);
         state.loadFrom(ares[0]);
+        /*
+        System.out.println("line 107");
+        System.out.println(state);*/
         
         // Compute 9 rounds of T2 boxes
         for(r=0; r<ROUNDS-1; r++){
@@ -104,37 +114,26 @@ public class AES implements Serializable {
             // One section ~ 1 column of state array, so select 1 column, first will
             // have indexes 0,4,8,12. Also take ShiftRows() into consideration.
             for(i=0; i<BYTES; i++){
-                ires[i].set(t2[r][i].lookup(state.get(shift(i))));
+                ires2[i].loadFrom(t2[r][i].lookup(state.get(shift(i))));
             }
             
-            for(i=0; i<State.COLS; i++){
-                // XOR results for one column from T2 boxes.
-                // After this operation we will have one 32bit ires[] for 1 column
-                ires[i].set(xor[r][2*i].xor(
-                    ires[ 0+i].getLong(), 
-                    ires[ 4+i].getLong(), 
-                    ires[ 8+i].getLong(), 
-                    ires[12+i].getLong()));
-                
-                // Apply T3 boxes, valid XOR results are in ires[0], ires[4], ires[8], ires[12]
-                // Start from the end, because in ires[i] is our XORing result.
-                final byte[] cires = ires[i].get(); 
-                ires[12+i].set(t3[r][12+i].lookup(cires[3]));
-                ires[ 8+i].set(t3[r][ 8+i].lookup(cires[2]));
-                ires[ 4+i].set(t3[r][ 4+i].lookup(cires[1]));
-                ires[ 0+i].set(t3[r][ 0+i].lookup(cires[0]));
-                
-                // Apply final XOR cascade after T3 box
-                ires[i].set(xor[r][2*i+1].xor(
-                    ires[ 0+i].getLong(), 
-                    ires[ 4+i].getLong(), 
-                    ires[ 8+i].getLong(), 
-                    ires[12+i].getLong()));
+            xorState2[r].xor(ires2);
+            state.loadFrom(ires2[0]);
+            
+            System.out.println("line 121");
+            System.out.println(state);
+            
+            for(i=0; i<BYTES; i++){
+            	ires3[i].loadFrom(t3[r][i].lookup(state.get(i)));
+            }
+            
+            xorState3[r].xor(ires3);
+            state.loadFrom(ires3[0]);
                 
                 // Copy results back to state,
                 // valid XOR results are in 32bit ires[0], ires[4], ires[8], ires[12]
-                state.setColumn(ires[i], i);
-            }
+                //state.setColumn(ires3[i], i);
+            
         }
         
         //
@@ -193,9 +192,11 @@ public class AES implements Serializable {
         
         t1        = new T1Box[T1BOXES][BYTES];
         xorState  = new XORCascadeState[T1BOXES];
+        xorState2  = new XORCascadeState[ROUNDS];
+        xorState3  = new XORCascadeState[ROUNDS];
         t2        = new T2Box[ROUNDS][BYTES];
         t3        = new T3Box[ROUNDS][BYTES];
-        xor       = new XORCascade[ROUNDS][2*State.COLS];
+        //xor       = new XORCascade[ROUNDS][2*State.COLS];
 
         for(r=0; r<ROUNDS; r++){
             //
@@ -204,6 +205,8 @@ public class AES implements Serializable {
             if (r<T1BOXES){
                 xorState[r] = new XORCascadeState();
             }
+            xorState2[r] = new XORCascadeState();
+            xorState3[r] = new XORCascadeState();
             
             for(i=0; i<BYTES; i++){
                 
@@ -219,13 +222,13 @@ public class AES implements Serializable {
                 //
                 t2[r][i] = new T2Box();
                 t3[r][i] = new T3Box();
-                
+                /*
                 //
                 // XOR cascade
                 //
                 if (i < 2*State.COLS){
                     xor[r][i] = new XORCascade();
-                }
+                }*/
             }
         }
     }
@@ -241,13 +244,17 @@ public class AES implements Serializable {
     public T2Box[][] getT2() {
         return t2;
     }
+    
+    public XORCascadeState[] getXorState2() {
+        return xorState2;
+    }
 
     public T3Box[][] getT3() {
         return t3;
     }
 
-    public XORCascade[][] getXor() {
-        return xor;
+    public XORCascadeState[] getXorState3() {
+        return xorState3;
     }
 
     public boolean isEncrypt() {
@@ -265,7 +272,7 @@ public class AES implements Serializable {
         hash = 89 * hash + Arrays.deepHashCode(this.xorState);
         hash = 89 * hash + Arrays.deepHashCode(this.t2);
         hash = 89 * hash + Arrays.deepHashCode(this.t3);
-        hash = 89 * hash + Arrays.deepHashCode(this.xor);
+        hash = 89 * hash + Arrays.deepHashCode(this.xorState3);
         hash = 89 * hash + (this.encrypt ? 1 : 0);
         return hash;
     }
@@ -291,7 +298,7 @@ public class AES implements Serializable {
         if (!Arrays.deepEquals(this.t3, other.t3)) {
             return false;
         }
-        if (!Arrays.deepEquals(this.xor, other.xor)) {
+        if (!Arrays.deepEquals(this.xorState3, other.xorState3)) {
             return false;
         }
         if (this.encrypt != other.encrypt) {

@@ -120,6 +120,14 @@ public class GXORCascadeState implements IOEncoding{
         Generator.CONNECT_XOR_TO_W08x32(cod[XORCascadeState.BOXES-1], 2*slot, cod1);
     }
     
+    //TODO
+	public void connectOut(GTBox8to128 c, int slot) {
+        Generator.W08x128Coding cod1 = c.getCod();
+        //Generator.CONNECT_XOR_TO_W08x32(cod[XORCascadeState.BOXES-1], 2*slot, cod1);
+        Generator.CONNECT_XOR_TO_W08x128(cod[XORCascadeState.BOXES-1], 2*slot, cod1);
+	}
+    
+    
     /**
      * Sets external encoding for output XOR box.
      * @param ext 
@@ -137,7 +145,7 @@ public class GXORCascadeState implements IOEncoding{
     public void generateTables(XORCascadeState c, Generator g){
         final Bijection4x4[] pCoding04x04 = g.getIo().getpCoding04x04();
         XORBoxState[] x = c.getX();
-        
+
         // Iterate over each 128bit XOR box
         for(int i=0; i<XORCascadeState.BOXES; i++){
             // Get whole XOR table; tbl[XORBox.BOXES][256]
@@ -170,4 +178,5 @@ public class GXORCascadeState implements IOEncoding{
     public int getIOInputSlots() {
         return XORCascadeState.WIDTH;
     }
+
 }

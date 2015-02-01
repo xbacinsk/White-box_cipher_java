@@ -45,9 +45,11 @@ public class AESCodingMap {					      // 15*4*8, used with T1 tables
     
     private GTBox8to128[][]    t1        = null;
     private GXORCascadeState[] xorState  = null;
-    private GTBox8to32[][]     t2        = null;
-    private GTBox8to32[][]     t3        = null;
-    private GXORCascade[][]    xor       = null;
+    private GXORCascadeState[] xorState2  = null;
+    private GXORCascadeState[] xorState3  = null;
+    private GTBox8to128[][]     t2        = null;
+    private GTBox8to128[][]     t3        = null;
+    //private GXORCascade[][]    xor       = null;
     private boolean            encrypt   = true;
     private int                idx       = 0;
     
@@ -67,9 +69,11 @@ public class AESCodingMap {					      // 15*4*8, used with T1 tables
         
         t1        = new GTBox8to128[T1BOXES][BYTES];
         xorState  = new GXORCascadeState[T1BOXES];
-        t2        = new GTBox8to32[ROUNDS][BYTES];
-        t3        = new GTBox8to32[ROUNDS][BYTES];
-        xor       = new GXORCascade[ROUNDS][2*State.COLS];
+        xorState2  = new GXORCascadeState[ROUNDS];
+        xorState3  = new GXORCascadeState[ROUNDS];
+        t2        = new GTBox8to128[ROUNDS][BYTES];
+        t3        = new GTBox8to128[ROUNDS][BYTES];
+        //xor       = new GXORCascade[ROUNDS][State.COLS];
 
         for(r=0; r<ROUNDS; r++){
             //
@@ -91,16 +95,19 @@ public class AESCodingMap {					      // 15*4*8, used with T1 tables
                 //
                 // T2, T3 boxes
                 //
-                t2[r][i] = new GTBox8to32();
-                t3[r][i] = new GTBox8to32();
-                
+                t2[r][i] = new GTBox8to128();
+                t3[r][i] = new GTBox8to128();
+                /*
                 //
                 // XOR cascade
                 //
-                if (i < 2*State.COLS){
+                if (i < State.COLS){
                     xor[r][i] = new GXORCascade();
-                }
+                }*/
             }
+
+            xorState2[r] = new GXORCascadeState();
+            xorState3[r] = new GXORCascadeState();
         }
     }
     
@@ -137,10 +144,12 @@ public class AESCodingMap {					      // 15*4*8, used with T1 tables
 	//
 	// 128-bit XOR has output indexed by rows, same as state.
 	//
-	for(i=0; i<BYTES; i++){
-            int newIdx = shiftOp(i);
-            xorState[0].connectOut(t2[0][newIdx], i);
-	}
+
+        	for(i=0; i<BYTES; i++){
+                int newIdx = shiftOp(i);
+                xorState[0].connectOut(t2[0][newIdx], i);
+        	}
+
         
         //
 	// In the last round there is only T1 table, with defined output mapping by user (external)
@@ -156,49 +165,49 @@ public class AESCodingMap {					      // 15*4*8, used with T1 tables
             for(i=0; i<BYTES; i++){
                 idx = t2[r][i].allocate(idx);
                 idx = t3[r][i].allocate(idx);
-                if (i < 2*State.COLS){
-                    idx = xor[r][i].allocate(idx);
-                }
+                //if (i < State.COLS){
+                //    idx = xor[r][i].allocate(idx);
+                //}
+            }
+
+            idx = xorState2[r].allocate(idx/*, r==0*/);
+
+            // Connecting part
+            xorState2[r].connectInternal();
+            for(i=0; i<BYTES; i++){
+                t2[r][i].connectOut(xorState2[r], i);
+            }
+                
+            for(i=0; i<BYTES; i++){
+                xorState2[r].connectOut(t3[r][i], i); //?
             }
             
+            idx = xorState3[r].allocate(idx/*, r==0*/);
+            xorState3[r].connectInternal();
             // iterate over strips/MC cols
             for(i=0; i<BYTES; i++){
-                //
-                // Connecting part - connecting allocated codings together
-                //
-                final int xorCol1 = 2*(i % State.COLS);     //2*(i/State.COLS);
-                final int xorCol2 = 2*(i % State.COLS) + 1; //2*(i/State.COLS) + 1;
-                final int slot    =    i / State.COLS;
-                
-                // Connect T2 boxes to XOR input boxes
-                t2[r][i].connectOut(xor[r][xorCol1], slot);
-                
-                // XOR boxes, one per column
-                if ((i / State.COLS) == (State.ROWS-1)){
-                    // Connect XOR layer 1 to XOR layer 2
-                    xor[r][xorCol1].connectInternal();
-                }
-                
-                // Connect result XOR layer 2 to B boxes (T3)
-                xor[r][xorCol1].connectOut(t3[r][i], slot);
-                
-                // Connect B boxes to XOR
-                t3[r][i].connectOut(xor[r][xorCol2], slot);
-                
+                    //
+                    // Connecting part - connecting allocated codings together
+                    //    //2*(i/State.COLS);
+                    final int xorCol = i % State.COLS; //2*(i/State.COLS) + 1;
+                    final int slot    =    i / State.COLS;
+
+                t3[r][i].connectOut(xorState3[r], i);
+/*
                 // Connect XOR layer 3 to XOR layer 4
                 if ((i / State.COLS) == (State.ROWS-1)){
-                    xor[r][xorCol2].connectInternal();
-                }
-                
+                    xor[r][xorCol].connectInternal();
+                }*/
+                                
                 if (r<(ROUNDS-2)){
                     // Connect result XOR layer 4 to T2 boxes in next round
-                    xor[r][xorCol2].connectOut(t2[r+1][shiftOp(i)], slot);
+                	xorState3[r].connectOut(t2[r+1][shiftOp(i)], i); //not t3? - no.
                 } else {
                     // Connect result XOR layer 4 to T1 boxes in last round; r==8
-                    xor[r][xorCol2].connectOut(t1[1][shiftOp(i)], slot);
+                	xorState3[r].connectOut(t1[1][shiftOp(i)], i);
                 }
             }
-	}
+		}
     }
 
     public GTBox8to128[][] getT1() {
@@ -209,18 +218,26 @@ public class AESCodingMap {					      // 15*4*8, used with T1 tables
         return xorState;
     }
 
-    public GTBox8to32[][] getT2() {
+    public GTBox8to128[][] getT2() {
         return t2;
     }
-
-    public GTBox8to32[][] getT3() {
-        return t3;
+    
+    public GXORCascadeState[] getXorState2() {
+        return xorState2;
     }
 
+    public GTBox8to128[][] getT3() {
+        return t3;
+    }
+    
+    public GXORCascadeState[] getXorState3() {
+        return xorState3;
+    }
+/*
     public GXORCascade[][] getXor() {
         return xor;
     }
-
+*/
     public boolean isEncrypt() {
         return encrypt;
     }

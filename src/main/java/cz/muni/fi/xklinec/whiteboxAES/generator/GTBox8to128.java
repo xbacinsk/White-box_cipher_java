@@ -65,7 +65,7 @@ public class GTBox8to128 implements IOEncoding {
             Generator.CONNECT_W08x32_TO_XOR_EX(cod, xcod[slot/2], (slot%2) == 0, i*8, i*4);
         }
     }
-    
+
     public W08x128Coding getCod() {
         return cod;
     }
@@ -81,6 +81,5 @@ public class GTBox8to128 implements IOEncoding {
     public int getIOInputSlots() {
         return 1;
     }
-    
-    
+
 }

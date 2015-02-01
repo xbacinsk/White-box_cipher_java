@@ -35,7 +35,7 @@ package cz.muni.fi.xklinec.whiteboxAES.generator;
 public class InternalBijections {
     private LinearBijection MB_L08x08[][]  = new LinearBijection[Generator.MB_CNT_08x08_ROUNDS][Generator.MB_CNT_08x08_PER_ROUND];
     private LinearBijection MB_MB32x32[][] = new LinearBijection[Generator.MB_CNT_32x32_ROUNDS][Generator.MB_CNT_32x32_PER_ROUND];
-    private LinearBijection MB_MB128x128[][] = new LinearBijection[Generator.MB_CNT_32x32_ROUNDS][Generator.MB_CNT_32x32_PER_ROUND*4];//TODO
+    private LinearBijection MB_MB128x128[][] = new LinearBijection[Generator.MB_CNT_128x128_ROUNDS][Generator.MB_CNT_128x128_PER_ROUND];//TODO
     private Bijection4x4[] pCoding04x04    = null; // needs to be initialized on demand...
     
     /**
@@ -55,8 +55,8 @@ public class InternalBijections {
         }
         
         //TODO
-        for(int r=0; r<Generator.MB_CNT_32x32_ROUNDS; r++){
-            for(int i=0; i<Generator.MB_CNT_32x32_PER_ROUND*4; i++){
+        for(int r=0; r<Generator.MB_CNT_128x128_ROUNDS; r++){
+            for(int i=0; i<Generator.MB_CNT_128x128_PER_ROUND; i++){
                 MB_MB128x128[r][i] = new LinearBijection();
             }
         }

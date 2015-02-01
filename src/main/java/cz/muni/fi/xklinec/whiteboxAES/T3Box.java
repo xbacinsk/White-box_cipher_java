@@ -36,6 +36,6 @@ import java.io.Serializable;
  * 
  * @author ph4r05
  */
-public class T3Box extends TBox8to32 implements Serializable{
+public class T3Box extends TBox8to128 implements Serializable{
     
 }
