@@ -927,6 +927,10 @@ public class Generator {
             sb.append((i>0 && (((i+1) % 16) == 0)) ? "\n" : ", ") ;
         }
         System.out.println(sb.toString());
+
+        // Generate key-dependent MDS matrices
+        System.out.println("Generating MDS matrices");
+        AESh.generateKeyDependentMDSmatrices(keySchedule, encrypt);
         
         // Generate all XOR cascades
         System.out.println("Generating all 32bit XOR tables");
@@ -1137,7 +1141,11 @@ public class Generator {
                         // Build [0 tmpE 0 0]^T stripe where tmpE is in j-th position
                         GF2mMatrixEx zj = new GF2mMatrixEx(field, 16, 1);
                         zj.set(j*State.COLS + i, 0, tmpE); //Must iterate through columns as above
-                        mcres = r < (AES.ROUNDS - 1) ? AESh.getMDS16x16Mat().rightMultiply(zj) : zj;
+                        //if(encrypt)
+                        	mcres = r < (AES.ROUNDS - 1) ? AESh.getMDS16x16Mat_array()[r].rightMultiply(zj) : zj; //[0] - now it uses only one matrix for all rounds - I'm not sure if it would be better to have one MDS matrix for each round
+                        //else
+                           // mcres = r < (AES.ROUNDS - 1) ? AESh.getMDS16x16Mat_array()[8-r].rightMultiply(zj) : zj; //[0] - now it uses only one matrix for all rounds - I'm not sure if it would be better to have one MDS matrix for each round
+
                         /*
                         mPreMB = NTLUtils.GF2mMatrix_to_GF2Matrix_col(mcres, 8);
                         mPreMB = (GF2MatrixEx) eMB_MB128x128[r][i].getMb().rightMultiply(mPreMB); //TODO instead of i should be j*4+i

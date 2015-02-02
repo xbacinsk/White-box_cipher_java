@@ -29,6 +29,9 @@
 package cz.muni.fi.xklinec.whiteboxAES.generator;
 
 import java.security.MessageDigest;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.TreeSet;
 
 import cz.muni.fi.xklinec.whiteboxAES.AES;
 import cz.muni.fi.xklinec.whiteboxAES.State;
@@ -260,6 +263,7 @@ public class AEShelper {
 	// MDS matrix is involutory, so the same for encryption and decryption
 	protected int MDS16x16[][] = new int[16][16];
 	protected GF2mMatrixEx MDS16x16Mat;
+	protected GF2mMatrixEx MDS16x16Mat_array[] = new GF2mMatrixEx[AES.ROUNDS-1];
 	
     protected int mixColModulus[]      = new int[5];
     protected int mixColMultiply[]     = new int[4];
@@ -333,16 +337,16 @@ public class AEShelper {
 	            // Computation is useless, we have inversion of transformation right from transformation above
 	            // by simply swapping indexes. This is just for validation purposes to show, that it really works and how
 		}
+				
 		
-		//TODO MDS16x16 multiplication?
-		createMDS16x16(/*TODO key*/);
+		createMDS16x16();
 		MDS16x16Mat = new GF2mMatrixEx(field, 16, 16);
 		for(i=0; i<16; i++){
-            for(c=0; c<16; c++){
-            	MDS16x16Mat.set(i, c, MDS16x16[i][c]);
-            }
+	        for(c=0; c<16; c++){
+	        	MDS16x16Mat.set(i, c, MDS16x16[i][c]);
+	        }
 		}
-		
+		//TODO zrusit MixColumn
 ///*
 		// 6. MixColumn operations
 		// modulus x^4 + 1
@@ -687,10 +691,12 @@ public class AEShelper {
     }
     
     /**
-     * TODO rename this method
-     * 
      * Key-dependent S-boxes on one byte.
-     * @param state 
+     * 
+     * @param e
+     * @param round
+     * @param column
+     * @return
      */
     public int ByteSub(int e, int round, int column) {
         
@@ -704,10 +710,12 @@ public class AEShelper {
     }
     
     /**
-     * TODO rename this method
-     * 
      * Key-dependent S-boxes on one byte.
-     * @param state 
+     * 
+     * @param e
+     * @param round
+     * @param column
+     * @return 
      */
     public int ByteSubInv(int e, int round, int column) {
         
@@ -845,7 +853,7 @@ public class AEShelper {
      */
 	public void createMDS16x16() {
 		int i;
-		int firstRow[] = new int[] { //should be key-dependent, last byte is computed from previous 15 using XOR through all of them and 0x01
+		int firstRow[] = new int[] { //last byte is computed from previous 15 using XOR through all of them and 0x01
 			0x01, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
 			0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x10, 0x02, 0x1e
 		}; //what is better: byte or int?
@@ -864,32 +872,94 @@ public class AEShelper {
 	}
 	
 	/**
-	 * TODO
 	 * Key-dependent MDS16x16 matrix.
 	 * 
 	 * @param key
 	 */
-	public void createMDS16x16(byte[] key) {
+	public int[][] createMDS16x16(byte[] key) {
 		int i;
 		int firstRow[] = new int[16]; //must be created cleverly - key byte not 0, pairwise different
 		
-		firstRow[15] = 1;
-		for(i = 0; i<15; i++) {
-			firstRow[i] = (int)key[i] & 0xff;
-			firstRow[15] ^= firstRow[i];
+		Set<Integer> set = new TreeSet<Integer>();
+		for(i = 0; i<16; i++) {
+			set.add((key[i] & 0x3f)); //TODO smaller numbers (5 bits)? I think 6 bits is a good compromise
+			set.add(((key[i] >>> 2) & 0x3f));
 		}
+
+		firstRow[15] = 1; //here will be XOR of previous 15 bytes and 1
+		i = 0;
+		for(Integer m : set){
+			firstRow[i] = m;
+			firstRow[15] ^= firstRow[i];
+			if(i == 14 && (set.contains(firstRow[15]) || firstRow[15] == 0)) {
+				firstRow[15] ^= firstRow[i];
+				continue;
+			}
+			if(m != 0) i++;
+			if(i == 15) break;
+		}
+/*
+		for(int g = 0; g<16; g++)
+			System.out.print(firstRow[g] + " ");
+		System.out.println(",");
+*/
+		if(i<15) return null;
 		
-		MDS16x16[0] = firstRow;
-		MDS16x16[2] = permutationMDS(MDS16x16[0], 4);
-		MDS16x16[4] = permutationMDS(MDS16x16[0], 8);
-		MDS16x16[6] = permutationMDS(MDS16x16[2], 8);
-		MDS16x16[8] = permutationMDS(MDS16x16[0], 16);
-		MDS16x16[10] = permutationMDS(MDS16x16[8], 4);
-		MDS16x16[12] = permutationMDS(MDS16x16[8], 8);
-		MDS16x16[14] = permutationMDS(MDS16x16[10], 8);
+		int MDS16x16D[][] = new int[16][16];
+		
+		MDS16x16D[0] = firstRow;
+		MDS16x16D[2] = permutationMDS(MDS16x16D[0], 4);
+		MDS16x16D[4] = permutationMDS(MDS16x16D[0], 8);
+		MDS16x16D[6] = permutationMDS(MDS16x16D[2], 8);
+		MDS16x16D[8] = permutationMDS(MDS16x16D[0], 16);
+		MDS16x16D[10] = permutationMDS(MDS16x16D[8], 4);
+		MDS16x16D[12] = permutationMDS(MDS16x16D[8], 8);
+		MDS16x16D[14] = permutationMDS(MDS16x16D[10], 8);
 		
 		for(i = 0; i<16; i+=2)
-			MDS16x16[i+1] = permutationMDS(MDS16x16[i], 2);
+			MDS16x16D[i+1] = permutationMDS(MDS16x16D[i], 2);
+		
+		return MDS16x16D;
+	}
+	
+	/**
+	 * TODO different key schedule than round keys, like for S-boxes
+	 * Generates MDS matrices from the given key schedule - one matrix per round
+	 * 
+	 * @param keySchedule
+	 * @param encrypt when decrypting, matrices are generated in reverse order
+	 */
+	public void generateKeyDependentMDSmatrices(byte[] keySchedule, boolean encrypt) {
+		byte key[] = new byte[16];
+		for(int i = 0; i<AES.ROUNDS-1; i++) {
+			for(int j = 0; j<16; j++) {
+				key[j] = keySchedule[16*i+j];
+			}
+			if(encrypt)
+				MDS16x16Mat_array[i] = generateKeyDependentMDSmatrix(key);
+			else 
+				MDS16x16Mat_array[8-i] = generateKeyDependentMDSmatrix(key);
+		}
+	}
+	
+	/**
+	 * Generates MDS matrix from the given (round)key.
+	 * If key is not suitable for matrix generation, constant MDS16x16Mat (created in build method) is returned
+	 * 
+	 * @param key
+	 * @return
+	 */
+	public GF2mMatrixEx generateKeyDependentMDSmatrix(byte[] key) {
+		int MDS16x16D[][] = createMDS16x16(key);
+		if(MDS16x16D == null) return MDS16x16Mat;
+		
+		GF2mMatrixEx MDS16x16MatD = new GF2mMatrixEx(field, 16, 16);
+		for(int i=0; i<16; i++){
+	        for(int c=0; c<16; c++){
+	        	MDS16x16MatD.set(i, c, MDS16x16D[i][c]);
+	        }
+		}
+		return MDS16x16MatD;
 	}
 
 
@@ -971,6 +1041,10 @@ public class AEShelper {
 	
 	public GF2mMatrixEx getMDS16x16Mat() {
 		return MDS16x16Mat;
+	}
+	
+	public GF2mMatrixEx[] getMDS16x16Mat_array() {
+		return MDS16x16Mat_array;
 	}
 
     public int[] getMixColModulus() {

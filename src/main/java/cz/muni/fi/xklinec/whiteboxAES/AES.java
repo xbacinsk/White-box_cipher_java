@@ -119,10 +119,10 @@ public class AES implements Serializable {
             
             xorState2[r].xor(ires2);
             state.loadFrom(ires2[0]);
-            
+            /*
             System.out.println("line 121");
             System.out.println(state);
-            
+            */
             for(i=0; i<BYTES; i++){
             	ires3[i].loadFrom(t3[r][i].lookup(state.get(i)));
             }

@@ -450,8 +450,8 @@ public final class AES_Cipher extends CipherSpi {
 	        generator.generateExtEncoding(extb, 0);
 	        
 	        // all protections are enabled (transformations are not identities)
-	        generator.setUseIO04x04Identity(true);
-	        generator.setUseIO08x08Identity(true);
+	        generator.setUseIO04x04Identity(false);
+	        generator.setUseIO08x08Identity(false);
 	        generator.setUseMB08x08Identity(false);
 	        generator.setUseMB32x32Identity(false);
 	        
