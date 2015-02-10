@@ -883,10 +883,17 @@ public class Generator {
         
         extc = ex;
         
-        System.out.println("AES initialization");
+        System.out.println("Generating key-dependent S-boxes");
         AESh.createKeyDependentSboxes(key, keySize);
-        System.out.println("AES initialization done");
+
+        System.out.println("AES initialization");
         AESh.build(encrypt);
+        
+        // Generate key-dependent MDS matrices
+        System.out.println("Generating MDS matrices");
+        AESh.generateKeyDependentMDSmatrices(key, keySize, encrypt, debug);
+        
+        System.out.println("AES initialization done");
         final GF2mField field = AESh.getField(); //new GF2mField(8, POLYNOMIAL)
         
         // Create coding map. This step is always constant for each AES
@@ -927,10 +934,6 @@ public class Generator {
             sb.append((i>0 && (((i+1) % 16) == 0)) ? "\n" : ", ") ;
         }
         System.out.println(sb.toString());
-
-        // Generate key-dependent MDS matrices
-        System.out.println("Generating MDS matrices");
-        AESh.generateKeyDependentMDSmatrices(keySchedule, encrypt);
         
         // Generate all XOR cascades
         System.out.println("Generating all 32bit XOR tables");

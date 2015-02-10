@@ -89,7 +89,7 @@ public class AEShelperTest extends TestCase {
      * Test of build method, of class AEShelper.
      */
     public void testKeySchedule() {
-        System.out.println("keySchedule");
+        System.out.println("keySchedule - old, with hashChain not working");
         AEShelper a = new AEShelper();
         a.build(true);
         
@@ -113,11 +113,14 @@ public class AEShelperTest extends TestCase {
         
         for(int i=0; i<16; i++){
             assertEquals("Key schedule is invalid; last round check", 
-                    roundKeyFinal[i],
-                    roundKey[AES.BYTES * AES.ROUNDS + i]);
+                roundKeyFinal[i],
+                roundKey[AES.BYTES * AES.ROUNDS + i]);
         }
     }
     
+    /**
+     * Test of hashChain generation
+     */
     public void testHashChain() {
     	System.out.println("test hashChain");
     	
@@ -140,6 +143,9 @@ public class AEShelperTest extends TestCase {
         //fail();
     }
     
+    /**
+     * Test of constant MDS16x16 matrix generation
+     */
     public void testIndependentMDS16x16() {
     	System.out.println("test Independent (constant) MDS16x16");
 
@@ -160,6 +166,9 @@ public class AEShelperTest extends TestCase {
     	}
     }
     
+    /**
+     * Test of key-dependent MDS16x16 matrix generation
+     */
     public void testKeyDependentMDS16x16() {
     	System.out.println("test Key-dependent MDS16x16");
 
@@ -172,7 +181,7 @@ public class AEShelperTest extends TestCase {
         AEShelper a = new AEShelper();
         a.build(true);
     	
-    	a.createMDS16x16(key);
+    	a.createMDS16x16(key, true);
     	int matrixInt[][] = a.getMDS16x16();
     	byte matrixByte[][] = new byte[16][16];
     	
@@ -186,6 +195,9 @@ public class AEShelperTest extends TestCase {
     	}
     }
 
+    /**
+     * Test of constant MDS16x16 matrix generation with multiplication by itself - should be neutral
+     */
     public void testIndependentMDS16x16Inverse() {
     	System.out.println("test Independent (constant) MDS16x16 - multiplicated by inverse");
 
@@ -209,6 +221,9 @@ public class AEShelperTest extends TestCase {
 		System.out.println(shouldBeI.toString());
     }
     
+    /**
+     * Test of key-dependent MDS16x16 matrix generation with multiplication by itself - should be neutral
+     */
     public void testKeyDependentMDS16x16Inverse() {
     	System.out.println("test Key-dependent MDS16x16 - multiplicated by inverse");
     	
@@ -224,7 +239,7 @@ public class AEShelperTest extends TestCase {
         AEShelper a = new AEShelper();
         a.build(true);
     	
-    	a.createMDS16x16(key);
+    	a.createMDS16x16(key, true);
     	int MDS16x16[][] = a.getMDS16x16();
     	GF2mMatrixEx MDS16x16Mat = new GF2mMatrixEx(field, 16, 16);
 		for(i=0; i<16; i++){
@@ -235,5 +250,25 @@ public class AEShelperTest extends TestCase {
 		
 		GF2mMatrixEx shouldBeI = MDS16x16Mat.rightMultiply(MDS16x16Mat);
 		System.out.println(shouldBeI.toString());
+    }
+    
+    /**
+     * Test of various (not suitable) keys for MDS16x16 generation
+     */
+    public void testSuitableKeysForMDS16x16() {
+    	
+    	byte key[] = new byte[]{
+                (byte)0x2b, (byte)0x7e, (byte)0x15, (byte)0x16,
+                (byte)0x28, (byte)0xae, (byte)0xd2, (byte)0xa6,
+                (byte)0xab, (byte)0xf7, (byte)0x17, (byte)0x88, //(byte)0xab, (byte)0xf7, (byte)0x15, (byte)0x88, 
+                (byte)0x09, (byte)0xcf, (byte)0x4f, (byte)0x3c };
+    	
+    	AEShelper a = new AEShelper();
+        a.build(true);
+    	
+    	if(a.createMDS16x16(key, true) == null) fail();
+    	
+    	a.generateKeyDependentMDSmatrices(key, key.length, true, true);
+
     }
 }

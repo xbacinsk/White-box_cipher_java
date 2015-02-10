@@ -29,6 +29,7 @@
 package cz.muni.fi.xklinec.whiteboxAES.generator;
 
 import java.security.MessageDigest;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeSet;
@@ -871,12 +872,22 @@ public class AEShelper {
 			MDS16x16[i+1] = permutationMDS(MDS16x16[i], 2);
 	}
 	
+	//TODO a better solution for this
+    private boolean contains(final int[] array, final int key) {
+        for (final int i : array) {
+            if (i == key) {
+                return true;
+            }
+        }
+        return false;
+    }
+	
 	/**
 	 * Key-dependent MDS16x16 matrix.
 	 * 
 	 * @param key
 	 */
-	public int[][] createMDS16x16(byte[] key) {
+	public int[][] createMDS16x16(byte[] key, boolean debug) {
 		int i;
 		int firstRow[] = new int[16]; //must be created cleverly - key byte not 0, pairwise different
 		
@@ -886,24 +897,33 @@ public class AEShelper {
 			set.add(((key[i] >>> 2) & 0x3f));
 		}
 
-		firstRow[15] = 1; //here will be XOR of previous 15 bytes and 1
+		firstRow[15] = 0; //here will be XOR of previous 15 bytes and 1
+		int firstRow15tmp = 1;
 		i = 0;
 		for(Integer m : set){
 			firstRow[i] = m;
-			firstRow[15] ^= firstRow[i];
-			if(i == 14 && (set.contains(firstRow[15]) || firstRow[15] == 0)) {
-				firstRow[15] ^= firstRow[i];
+			firstRow15tmp ^= firstRow[i];
+			if(i == 14 && (contains(firstRow, firstRow15tmp) || firstRow15tmp == 0)) {
+				firstRow15tmp ^= firstRow[i];
 				continue;
 			}
 			if(m != 0) i++;
-			if(i == 15) break;
+			if(i == 15) {
+				firstRow[15] = firstRow15tmp;
+				break;
+			}
 		}
-/*
-		for(int g = 0; g<16; g++)
-			System.out.print(firstRow[g] + " ");
-		System.out.println(",");
-*/
-		if(i<15) return null;
+
+		if(debug) {
+			for(int g = 0; g<16; g++)
+				System.out.print(firstRow[g] + " ");
+			System.out.println(",");
+		}
+	
+		if(i<15) {
+			if(debug) System.out.println("Constant MDS matrix used.");
+			return null;
+		}
 		
 		int MDS16x16D[][] = new int[16][16];
 		
@@ -929,16 +949,23 @@ public class AEShelper {
 	 * @param keySchedule
 	 * @param encrypt when decrypting, matrices are generated in reverse order
 	 */
-	public void generateKeyDependentMDSmatrices(byte[] keySchedule, boolean encrypt) {
-		byte key[] = new byte[16];
+	public void generateKeyDependentMDSmatrices(byte[] key, int size, boolean encrypt, boolean debug) {
+		
+    	byte[] magicConstant = new byte[] {'M','D','S','M','a','g','i','c','C','o','n','s','t','a','n','t'};
+    	byte[] input = new byte[key.length + magicConstant.length];
+    	System.arraycopy(key, 0, input, 0, key.length);
+    	System.arraycopy(magicConstant, 0, input, key.length, magicConstant.length);
+    	
+        byte[] roundKeysForMDSmatrices = hashChain(input, size, "TheConstantSalt.", false);
+    	
+		
+		byte roundKey[] = new byte[16];
 		for(int i = 0; i<AES.ROUNDS-1; i++) {
-			for(int j = 0; j<16; j++) {
-				key[j] = keySchedule[16*i+j];
-			}
+			System.arraycopy(roundKeysForMDSmatrices, 16*i, roundKey, 0, 16);
 			if(encrypt)
-				MDS16x16Mat_array[i] = generateKeyDependentMDSmatrix(key);
+				MDS16x16Mat_array[i] = generateKeyDependentMDSmatrix(roundKey, debug);
 			else 
-				MDS16x16Mat_array[8-i] = generateKeyDependentMDSmatrix(key);
+				MDS16x16Mat_array[8-i] = generateKeyDependentMDSmatrix(roundKey, debug);
 		}
 	}
 	
@@ -949,8 +976,8 @@ public class AEShelper {
 	 * @param key
 	 * @return
 	 */
-	public GF2mMatrixEx generateKeyDependentMDSmatrix(byte[] key) {
-		int MDS16x16D[][] = createMDS16x16(key);
+	public GF2mMatrixEx generateKeyDependentMDSmatrix(byte[] key, boolean debug) {
+		int MDS16x16D[][] = createMDS16x16(key, debug);
 		if(MDS16x16D == null) return MDS16x16Mat;
 		
 		GF2mMatrixEx MDS16x16MatD = new GF2mMatrixEx(field, 16, 16);

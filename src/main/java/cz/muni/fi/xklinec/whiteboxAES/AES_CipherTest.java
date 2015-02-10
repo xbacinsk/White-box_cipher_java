@@ -184,7 +184,7 @@ public class AES_CipherTest extends TestCase {
 			AES_Cipher encryptor = new AES_Cipher();
 			encryptor.engineInit(Cipher.ENCRYPT_MODE, key, random);
 			
-			outputEnc = encryptor.engineDoFinal(AEShelper.testVect128_plain[1], 0, 16);
+			outputEnc = encryptor.engineDoFinal(AEShelper.testVect128_plain[3], 0, 16);
 		} catch (Exception e) {
 			System.out.println("Exception " + e.getMessage());
 		}
@@ -200,7 +200,7 @@ public class AES_CipherTest extends TestCase {
 			byte[] outputDec = new byte[16];
 			outputDec = decryptor.engineDoFinal(outputEnc, 0, 16);
 			
-			State plain_sour = new State(AEShelper.testVect128_plain[1], true,  false);
+			State plain_sour = new State(AEShelper.testVect128_plain[3], true,  false);
 			State plain_comp = new State(outputDec, true,  false);
 			
 			assertEquals("Plaintext output mismatch in API", true, plain_comp.equals(plain_sour));
