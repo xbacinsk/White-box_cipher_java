@@ -30,9 +30,8 @@ package cz.muni.fi.xklinec.whiteboxAES.generator;
 
 import java.security.MessageDigest;
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
-import java.util.TreeSet;
 
 import cz.muni.fi.xklinec.whiteboxAES.AES;
 import cz.muni.fi.xklinec.whiteboxAES.State;
@@ -589,14 +588,14 @@ public class AEShelper {
     		
     		if(i == 0)
     			//tmpKey = SCrypt.generate(key, salt, 16, 1, 1, size);
-    			tmpKey = hashFunction(key, salt, size, 0/*N_bc for bcrypt*/, 0);
+    			tmpKey = hashFunction(key, salt, size, AES.scrypt_N, AES.scrypt_r, AES.scrypt_p, 16);
     		else {
 	    		byte[] hashInput = new byte[2*size];
 	    		System.arraycopy(tmpKey, 0, hashInput, 0, size);
 	    		System.arraycopy(key, 0, hashInput, size, size);
 	    		
 	    		//tmpKey = SCrypt.generate(hashInput, salt, 16, 1, 1, size);
-	    		tmpKey = hashFunction(hashInput, salt, size, 0/*N_bc for bcrypt*/, 0);
+	    		tmpKey = hashFunction(hashInput, salt, size, AES.scrypt_N, AES.scrypt_r, AES.scrypt_p, 16);
     		}
     		
     		System.arraycopy(tmpKey, 0, roundKeys, currentSize, size);
@@ -615,7 +614,7 @@ public class AEShelper {
      * @param n_sha number of sha256 applications
      * @return
      */
-    private byte[] hashFunction(byte[] input, byte[] salt, int size, int n_bc, int n_sha) {
+    private byte[] hashFunction(byte[] input, byte[] salt, int size, int sc_N, int sc_r, int sc_p, int n_sha) {
     	int i;
     	byte[] tmpInput = new byte[input.length];
     	System.arraycopy(input, 0, tmpInput, 0, input.length);
@@ -630,7 +629,7 @@ public class AEShelper {
     		}
     	}
     	
-    	return SCrypt.generate(tmpInput, salt, 16, 1, 1, size);
+    	return SCrypt.generate(tmpInput, salt, sc_N, sc_r, sc_p, size);
     }
     
     /**
@@ -643,26 +642,27 @@ public class AEShelper {
     public void createKeyDependentSboxes(byte[] key, int size) {
     	int i, r;
     	
-    	byte[] magicConstant = new byte[] {'M','a','g','i','c','C','o','n','s','t','a','n','t'};
+    	byte[] magicConstant = AES.SBOXconstant;
     	byte[] input = new byte[key.length + magicConstant.length];
     	System.arraycopy(key, 0, input, 0, key.length);
     	System.arraycopy(magicConstant, 0, input, key.length, magicConstant.length);
     	
-        byte[] roundKeysForSboxes = hashChain(input, size, "TheConstantSalt.", false);
+        byte[] roundKeysForSboxes = hashChain(input, size, AES.SALT, false);
     	
     	for(r = 0; r<roundKeysForSboxes.length/size-1; r++) {
     		
     		byte[] roundKey = new byte[size];
     		System.arraycopy(roundKeysForSboxes, size*r, roundKey, 0, size);
-        	byte key_bytes[][] = keyBytesDerivation(roundKey, size);
-    		
+
+        	byte[] key_bytesForSboxes = keyBytesDerivation(roundKey);
+
 	    	for(i = 0; i<256; i++) {
 		    	
-		    	s0_k0_k1[r][i] = (int)q8x8[1][((int)q8x8[0][((int)q8x8[0][i] & 0xff) ^ ((int)key_bytes[0][0] & 0xff)] & 0xff) ^ ((int)key_bytes[1][0] & 0xff)] & 0xff; //What with the DWORDs?
-		    	s1_k2_k3[r][i] = (int)q8x8[0][((int)q8x8[0][((int)q8x8[1][i] & 0xff) ^ ((int)key_bytes[0][1] & 0xff)] & 0xff) ^ ((int)key_bytes[1][1] & 0xff)] & 0xff;
-		    	s2_k4_k5[r][i] = (int)q8x8[1][((int)q8x8[1][((int)q8x8[0][i] & 0xff) ^ ((int)key_bytes[0][2] & 0xff)] & 0xff) ^ ((int)key_bytes[1][2] & 0xff)] & 0xff;
-		    	s3_k6_k7[r][i] = (int)q8x8[0][((int)q8x8[1][((int)q8x8[1][i] & 0xff) ^ ((int)key_bytes[0][3] & 0xff)] & 0xff) ^ ((int)key_bytes[1][3] & 0xff)] & 0xff;
-	
+		    	s0_k0_k1[r][i] = sboxgen(0,13,i,key_bytesForSboxes);
+		    	s1_k2_k3[r][i] = sboxgen(1,13,i,key_bytesForSboxes);
+		    	s2_k4_k5[r][i] = sboxgen(2,13,i,key_bytesForSboxes);
+		    	s3_k6_k7[r][i] = sboxgen(3,13,i,key_bytesForSboxes);
+
 		    	s0_k0_k1_inv[9-r][s0_k0_k1[r][i]] = i;
 		    	s1_k2_k3_inv[9-r][s1_k2_k3[r][i]] = i;
 		    	s2_k4_k5_inv[9-r][s2_k4_k5[r][i]] = i;
@@ -689,6 +689,39 @@ public class AEShelper {
     		}
     	}
     	return s;
+    }
+    
+    /**
+     * Derivation of the exact key bytes for key-dependent S-boxes using SHA512
+     * 
+     * @param key original key
+     */
+    private byte[] keyBytesDerivation(byte[] key) {
+
+    	byte s[] = new byte[64];
+    	
+		try {
+    		MessageDigest md = MessageDigest.getInstance("SHA-512");
+    		md.update(key);
+    		s = md.digest();
+		} catch(Exception e) { //NoSuchAlgorithmException
+			System.out.println("Problem with SHA512 in keyBytesDerivation (used in createKeyDependentSboxes).");
+		}
+		
+    	return s;
+    }
+    
+    private int sboxgen(int j, int l, int x, byte[] key_bytes) {
+    	
+    	int qs[][] = new int[][] {{0,0,1,0,1,0,1,0,1,0,1,0,1,1},
+    							  {1,0,0,1,1,0,0,1,1,0,0,1,1,0},
+    							  {0,1,1,0,0,1,1,0,0,1,1,0,0,1},
+    							  {1,1,0,0,0,1,1,1,0,0,0,1,1,1}};
+    	
+    	if(l == 0)
+    		return (int)q8x8[qs[j][0]][x] & 0xff;
+    	else
+    		return (int)q8x8[qs[j][l]][sboxgen(j, l-1, x, key_bytes) ^ ((int)key_bytes[4*(l-1)+j] & 0xff)] & 0xff;
     }
     
     /**
@@ -891,7 +924,7 @@ public class AEShelper {
 		int i;
 		int firstRow[] = new int[16]; //must be created cleverly - key byte not 0, pairwise different
 		
-		Set<Integer> set = new TreeSet<Integer>();
+		Set<Integer> set = new LinkedHashSet<Integer>();
 		for(i = 0; i<16; i++) {
 			set.add((key[i] & 0x3f)); //TODO smaller numbers (5 bits)? I think 6 bits is a good compromise
 			set.add(((key[i] >>> 2) & 0x3f));
@@ -951,14 +984,13 @@ public class AEShelper {
 	 */
 	public void generateKeyDependentMDSmatrices(byte[] key, int size, boolean encrypt, boolean debug) {
 		
-    	byte[] magicConstant = new byte[] {'M','D','S','M','a','g','i','c','C','o','n','s','t','a','n','t'};
+    	byte[] magicConstant = AES.MDSconstant;
     	byte[] input = new byte[key.length + magicConstant.length];
     	System.arraycopy(key, 0, input, 0, key.length);
     	System.arraycopy(magicConstant, 0, input, key.length, magicConstant.length);
     	
-        byte[] roundKeysForMDSmatrices = hashChain(input, size, "TheConstantSalt.", false);
+        byte[] roundKeysForMDSmatrices = hashChain(input, size, AES.SALT, false);
     	
-		
 		byte roundKey[] = new byte[16];
 		for(int i = 0; i<AES.ROUNDS-1; i++) {
 			System.arraycopy(roundKeysForMDSmatrices, 16*i, roundKey, 0, 16);

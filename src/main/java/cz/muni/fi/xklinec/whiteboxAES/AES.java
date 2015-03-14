@@ -39,6 +39,15 @@ import java.io.Serializable;
 public class AES implements Serializable {
 
 	private static final long serialVersionUID = 1L; // added serialization
+
+	public static final int scrypt_N = 16384; //2^14 = 5sec, maybe change to 2^16 = 20sec
+	public static final int scrypt_r = 8;
+	public static final int scrypt_p = 1;
+
+	public static final String SALT = "TheConstantSalt.";
+	public static final byte[] SBOXconstant = new byte[] {'S','b','o','x','M','a','g','i','c','C','o','n','s','t','a','n','t'};
+	public static final byte[] MDSconstant = new byte[] {'M','D','S','M','a','g','i','c','C','o','n','s','t','a','n','t'};
+	
 	public static final int BYTES  = State.BYTES;
     public static final int ROUNDS = 10;
     public static final int T1BOXES = 2;

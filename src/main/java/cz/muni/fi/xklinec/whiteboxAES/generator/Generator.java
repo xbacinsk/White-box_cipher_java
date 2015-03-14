@@ -927,7 +927,7 @@ public class Generator {
         
         // Generate round keys
         System.out.println("Computing key schedule ");
-        byte[] keySchedule = AESh.hashChain(key, keySize, "TheConstantSalt.", debug);
+        byte[] keySchedule = AESh.hashChain(key, keySize, AES.SALT, debug);
         StringBuilder sb = new StringBuilder();
         for(int i=0; i<keySchedule.length; i++){
             sb.append(String.format("0x%02X", keySchedule[i]));
