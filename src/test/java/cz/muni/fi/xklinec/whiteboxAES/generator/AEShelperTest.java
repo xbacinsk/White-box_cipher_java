@@ -4,6 +4,11 @@
  */
 package cz.muni.fi.xklinec.whiteboxAES.generator;
 
+import java.security.Key;
+import java.security.MessageDigest;
+
+import javax.crypto.spec.SecretKeySpec;
+
 import org.bouncycastle.pqc.math.linearalgebra.GF2mField;
 
 import cz.muni.fi.xklinec.whiteboxAES.AES;
@@ -271,4 +276,230 @@ public class AEShelperTest extends TestCase {
     	a.generateKeyDependentMDSmatrices(key, key.length, true, true);
 
     }
+    
+    /**
+     * Partial computation of test vectors
+     */
+    public void testVectorsGeneration() {
+
+    	System.out.println("test vectors generation");    	
+    	
+    	// plaintext from AES test vectors
+    	byte plaintext[] = AEShelper.testVect128_plain[0];
+        State plaintext_string  = new State(plaintext, true,  false);
+        System.out.println("- plaintext_string: " + plaintext_string);
+
+    	// key from AES test vectors
+        byte key[] = AEShelper.testVect128_key;
+        State key_string  = new State(key, true,  false);
+        System.out.println("- key_string: " + key_string);
+
+        // just a helper
+        AEShelper a = new AEShelper();
+        a.build(true);
+
+        // hash chain - round keys generation
+        byte[] roundKeys = a.hashChain(key, 16, AES.SALT, false);
+
+        for(int r=0; r<AES.ROUNDS + 1; r++){
+        	byte roundKey[] = new byte[AES.BYTES];
+        	System.arraycopy(roundKeys, AES.BYTES * r, roundKey, 0, AES.BYTES);
+            State roundKey_string  = new State(roundKey, true,  false);
+            System.out.println("- key_string " + r + ": " + roundKey_string);
+        }
+
+        // hash chain - round keys for S-boxes
+    	byte[] key_sboxes = new byte[key.length + AES.SBOXconstant.length];
+    	System.arraycopy(key, 0, key_sboxes, 0, key.length);
+    	System.arraycopy(AES.SBOXconstant, 0, key_sboxes, key.length, AES.SBOXconstant.length);
+        byte[] roundKeysForSboxes = a.hashChain(key_sboxes, key.length, AES.SALT, false);
+
+        for(int r=0; r<AES.ROUNDS + 1; r++){
+        	byte roundKey[] = new byte[AES.BYTES];
+        	System.arraycopy(roundKeysForSboxes, AES.BYTES * r, roundKey, 0, AES.BYTES);
+            State roundKey_string  = new State(roundKey, true,  false);
+            System.out.println("- S-box_key_string " + r + ": " + roundKey_string);
+        }
+
+        // hash chain - round keys for MDS matrices
+    	byte[] key_MDS = new byte[key.length + AES.MDSconstant.length];
+    	System.arraycopy(key, 0, key_MDS, 0, key.length);
+    	System.arraycopy(AES.MDSconstant, 0, key_MDS, key.length, AES.MDSconstant.length);
+        byte[] roundKeysForMDS = a.hashChain(key_MDS, key.length, AES.SALT, false);
+
+        for(int r=0; r<AES.ROUNDS + 1; r++){
+        	byte roundKey[] = new byte[AES.BYTES];
+        	System.arraycopy(roundKeysForMDS, AES.BYTES * r, roundKey, 0, AES.BYTES);
+            State roundKey_string  = new State(roundKey, true,  false);
+            System.out.println("- MDS_key_string " + r + ": " + roundKey_string);
+        }
+
+        // all rounds of the cipher
+    	for(int r = 0; r<AES.ROUNDS; r++) {
+    		System.out.println("r = " + r);
+    		
+    		byte[] roundKeyForSboxes = new byte[key.length];
+    		System.arraycopy(roundKeysForSboxes, key.length*r, roundKeyForSboxes, 0, key.length);
+        	byte key_bytesForSboxes[] = new byte[64];
+        	
+    		try {
+        		MessageDigest md = MessageDigest.getInstance("SHA-512");
+        		md.update(roundKeyForSboxes);
+        		key_bytesForSboxes = md.digest();
+    		} catch(Exception e) { //NoSuchAlgorithmException
+    			System.out.println("Problem with SHA512 in keyBytesDerivation (used in createKeyDependentSboxes).");
+    		}
+    		
+            // addRoundKey
+            for(int i = 0; i<AES.BYTES; i++)
+            	plaintext[i] ^= roundKeys[AES.BYTES * r + i];
+            State plaintext_ARK_string  = new State(plaintext, true,  false);
+            System.out.println("- plaintext_ARK_string: " + plaintext_ARK_string);
+            
+    		// subBytes
+	    	byte state_bytes[] = new byte[AES.BYTES];
+		    state_bytes[0] = (byte) a.sboxgen(0,13,(int)plaintext[0] & 0xff,key_bytesForSboxes);
+		    state_bytes[1] = (byte) a.sboxgen(1,13,(int)plaintext[1] & 0xff,key_bytesForSboxes);
+		    state_bytes[2] = (byte) a.sboxgen(2,13,(int)plaintext[2] & 0xff,key_bytesForSboxes);
+		    state_bytes[3] = (byte) a.sboxgen(3,13,(int)plaintext[3] & 0xff,key_bytesForSboxes);
+
+		    state_bytes[4] = (byte) a.sboxgen(0,13,(int)plaintext[4] & 0xff,key_bytesForSboxes);
+		    state_bytes[5] = (byte) a.sboxgen(1,13,(int)plaintext[5] & 0xff,key_bytesForSboxes);
+		    state_bytes[6] = (byte) a.sboxgen(2,13,(int)plaintext[6] & 0xff,key_bytesForSboxes);
+		    state_bytes[7] = (byte) a.sboxgen(3,13,(int)plaintext[7] & 0xff,key_bytesForSboxes);
+
+		    state_bytes[8]  = (byte) a.sboxgen(0,13,(int)plaintext[8] & 0xff,key_bytesForSboxes);
+		    state_bytes[9]  = (byte) a.sboxgen(1,13,(int)plaintext[9] & 0xff,key_bytesForSboxes);
+		    state_bytes[10] = (byte) a.sboxgen(2,13,(int)plaintext[10] & 0xff,key_bytesForSboxes);
+		    state_bytes[11] = (byte) a.sboxgen(3,13,(int)plaintext[11] & 0xff,key_bytesForSboxes);
+
+		    state_bytes[12] = (byte) a.sboxgen(0,13,(int)plaintext[12] & 0xff,key_bytesForSboxes);
+		    state_bytes[13] = (byte) a.sboxgen(1,13,(int)plaintext[13] & 0xff,key_bytesForSboxes);
+		    state_bytes[14] = (byte) a.sboxgen(2,13,(int)plaintext[14] & 0xff,key_bytesForSboxes);
+		    state_bytes[15] = (byte) a.sboxgen(3,13,(int)plaintext[15] & 0xff,key_bytesForSboxes);
+
+    		System.arraycopy(state_bytes, 0, plaintext, 0, AES.BYTES);
+            State plaintext_SB_string  = new State(plaintext, true,  false);
+            System.out.println("- plaintext_SB_string: " + plaintext_SB_string);
+            
+    		// shiftRows
+		    state_bytes[0] = plaintext[0];
+		    state_bytes[1] = plaintext[5];
+		    state_bytes[2] = plaintext[10];
+		    state_bytes[3] = plaintext[15];
+		    
+		    state_bytes[4] = plaintext[4];
+		    state_bytes[5] = plaintext[9];
+		    state_bytes[6] = plaintext[14];
+		    state_bytes[7] = plaintext[3];
+		    
+		    state_bytes[8]  = plaintext[8];
+		    state_bytes[9]  = plaintext[13];
+		    state_bytes[10] = plaintext[2];
+		    state_bytes[11] = plaintext[7];
+		    
+		    state_bytes[12] = plaintext[12];
+		    state_bytes[13] = plaintext[1];
+		    state_bytes[14] = plaintext[6];
+		    state_bytes[15] = plaintext[11];
+    		System.arraycopy(state_bytes, 0, plaintext, 0, AES.BYTES);
+            State plaintext_SR_string  = new State(plaintext, true,  false);
+            System.out.println("- plaintext_SR_string: " + plaintext_SR_string);
+
+            // MDS matrix multiplication - not in the final round
+            if(r != AES.ROUNDS - 1) {
+            	// matica len dvojrozmerne pole, ziadny specialny objekt, nasobenie rucne
+
+        		byte[] roundKeyForMDS = new byte[key.length];
+        		System.arraycopy(roundKeysForMDS, key.length*r, roundKeyForMDS, 0, key.length);
+                //State roundKeyForMDS_string  = new State(roundKeyForMDS, true,  false);
+                //System.out.println("- roundKeyForMDS_string: " + roundKeyForMDS_string);
+            	
+                // MDS matrix generation //TODO zistit, ci sa MDS16x16 vyraba skutocne ako chcem
+        		int[][] MDS16x16int = a.createMDS16x16(roundKeyForMDS, true);
+        		//byte[][] MDS16x16byte = new byte[16][16];
+        		//for(int i = 0; i<16; i++)
+        		//	for(int j = 0; j<16; j++)
+        		//		MDS16x16byte[i][j] = (byte) MDS16x16int[i][j];
+                //State firstRowMDS_string  = new State(MDS16x16byte[0], true,  false);
+                //System.out.println("- firstRowMDS_string: " + firstRowMDS_string);
+
+
+        		// transpose
+    		    state_bytes[0] = plaintext[0];
+    		    state_bytes[1] = plaintext[4];
+    		    state_bytes[2] = plaintext[8];
+    		    state_bytes[3] = plaintext[12];
+    		    
+    		    state_bytes[4] = plaintext[1];
+    		    state_bytes[5] = plaintext[5];
+    		    state_bytes[6] = plaintext[9];
+    		    state_bytes[7] = plaintext[13];
+    		    
+    		    state_bytes[8]  = plaintext[2];
+    		    state_bytes[9]  = plaintext[6];
+    		    state_bytes[10] = plaintext[10];
+    		    state_bytes[11] = plaintext[14];
+    		    
+    		    state_bytes[12] = plaintext[3];
+    		    state_bytes[13] = plaintext[7];
+    		    state_bytes[14] = plaintext[11];
+    		    state_bytes[15] = plaintext[15];
+        		System.arraycopy(state_bytes, 0, plaintext, 0, AES.BYTES);
+                State plaintext_TR_string  = new State(plaintext, true,  false);
+                System.out.println("- plaintext_TR_string: " + plaintext_TR_string);
+
+                // MDS matrix multiplication
+        		for(int i = 0; i<16; i++) {
+                	state_bytes[i] = 0;
+                	for(int j = 0; j<16; j++) {
+                		int x = (int)plaintext[j] & 0xff;
+                		for(int b = 0; b<8; b++) {
+                			if(((MDS16x16int[i][j] >>> b) & 0x01) == 1) {
+                				state_bytes[i] ^= (byte) x;
+                			}
+                			x = ((x << 1) & 0x100) == 0 ? x << 1 : (x << 1) ^ 283;
+                		}
+                	}
+                }
+                System.arraycopy(state_bytes, 0, plaintext, 0, AES.BYTES);
+                State plaintext_MDS_string  = new State(plaintext, true,  false);
+                System.out.println("- plaintext_MDS_string: " + plaintext_MDS_string);
+
+
+        		// transpose back
+    		    state_bytes[0] = plaintext[0];
+    		    state_bytes[1] = plaintext[4];
+    		    state_bytes[2] = plaintext[8];
+    		    state_bytes[3] = plaintext[12];
+
+    		    state_bytes[4] = plaintext[1];
+    		    state_bytes[5] = plaintext[5];
+    		    state_bytes[6] = plaintext[9];
+    		    state_bytes[7] = plaintext[13];
+
+    		    state_bytes[8]  = plaintext[2];
+    		    state_bytes[9]  = plaintext[6];
+    		    state_bytes[10] = plaintext[10];
+    		    state_bytes[11] = plaintext[14];
+
+    		    state_bytes[12] = plaintext[3];
+    		    state_bytes[13] = plaintext[7];
+    		    state_bytes[14] = plaintext[11];
+    		    state_bytes[15] = plaintext[15];
+        		System.arraycopy(state_bytes, 0, plaintext, 0, AES.BYTES);
+                State plaintext_TR2_string  = new State(plaintext, true,  false);
+                System.out.println("- plaintext_TR2_string: " + plaintext_TR2_string);
+            }
+            
+    	}
+
+        // addRoundKey
+        for(int i = 0; i<AES.BYTES; i++)
+        	plaintext[i] ^= roundKeys[AES.BYTES * 10 + i];
+        State plaintext_end_string  = new State(plaintext, true,  false);
+        System.out.println("- ciphertext_string: " + plaintext_end_string);
+
+    }
+    
 }
