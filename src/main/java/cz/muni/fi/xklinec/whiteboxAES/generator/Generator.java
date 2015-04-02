@@ -1008,14 +1008,17 @@ public class Generator {
                              16 * (r + 1) + State.transpose(idx)
                            : 16 * AES.ROUNDS + State.transpose(AES.shift(idx, encrypt));
                     
-                    System.out.println((encrypt ? 'e': 'd')+"T[" + r + "][" + i + "][" + j + "] key = "
+                    if(debug) 
+                    	System.out.println((encrypt ? 'e': 'd')+"T[" + r + "][" + i + "][" + j + "] key = "
                             + keyIdx
                             + " = " + String.format("0x%02X", posIdx(keySchedule[keyIdx]))
                             + "; idx=" + idx);
                     
-                    if ((!encrypt && r == 0) || (r == AES.ROUNDS - 1 && encrypt)) {
-                        System.out.println((encrypt ? 'e': 'd')+"T[" + r + "][" + i + "][" + j + "]F key = "
+                    if(debug) {
+                    	if ((!encrypt && r == 0) || (r == AES.ROUNDS - 1 && encrypt)) {
+                    		System.out.println((encrypt ? 'e': 'd')+"T[" + r + "][" + i + "][" + j + "]F key = "
                                  + keyIdx2 + " = " + String.format("0x%02X", posIdx(keySchedule[keyIdx2])));                   
+                    	}
                     }
                     
 
@@ -1143,12 +1146,14 @@ public class Generator {
                        
                         // Build [0 tmpE 0 0]^T stripe where tmpE is in j-th position
                         GF2mMatrixEx zj = new GF2mMatrixEx(field, 16, 1);
-                        zj.set(j*State.COLS + i, 0, tmpE); //Must iterate through columns as above
-                        //if(encrypt)
-                        	mcres = r < (AES.ROUNDS - 1) ? AESh.getMDS16x16Mat_array()[r].rightMultiply(zj) : zj; //[0] - now it uses only one matrix for all rounds - I'm not sure if it would be better to have one MDS matrix for each round
+                        zj.set(idx, 0, tmpE); //Must iterate through columns as above, 4*j+i
+                        //if(encrypt) //TODO bacha, jednotkova matica!
+                        	mcres = r < (AES.ROUNDS - 1) ? AESh.getMDS16x16Mat_array()[r].rightMultiply(zj) : zj;
                         //else
                            // mcres = r < (AES.ROUNDS - 1) ? AESh.getMDS16x16Mat_array()[8-r].rightMultiply(zj) : zj; //[0] - now it uses only one matrix for all rounds - I'm not sure if it would be better to have one MDS matrix for each round
-
+                        	
+                        	//System.out.println("MDS r=" + r + ": " + AESh.getMDS16x16Mat_array()[r]);
+                        	
                         /*
                         mPreMB = NTLUtils.GF2mMatrix_to_GF2Matrix_col(mcres, 8);
                         mPreMB = (GF2MatrixEx) eMB_MB128x128[r][i].getMb().rightMultiply(mPreMB); //TODO instead of i should be j*4+i

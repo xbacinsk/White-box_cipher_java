@@ -52,7 +52,7 @@ public class AES_CipherTest extends TestCase {
 
         SecureRandom random = new SecureRandom();
 		
-		Key key = new SecretKeySpec(AEShelper.testVect128_key, "WBAES");
+		Key key = new SecretKeySpec(AEShelper.testVect128_key[1], "WBAES");
 		
 		AES_Cipher encryptor = new AES_Cipher();
 		try {
@@ -61,7 +61,7 @@ public class AES_CipherTest extends TestCase {
 		
 		byte[] outputEnc = new byte[16];
 		try {
-			outputEnc = encryptor.engineDoFinal(AEShelper.testVect128_plain[1], 0, 16);
+			outputEnc = encryptor.engineDoFinal(AEShelper.testVect128_plain[0], 0, 16);
 		} catch (Exception e) {}
 		
 		
@@ -75,7 +75,7 @@ public class AES_CipherTest extends TestCase {
 			outputDec = decryptor.engineDoFinal(outputEnc, 0, 16);
 		} catch (Exception e) {}
 		
-        State plain  = new State(AEShelper.testVect128_plain[1], true,  false);
+        State plain  = new State(AEShelper.testVect128_plain[0], true,  false);
 		
 		System.out.println("Testvector plaintext sour: \n" + plain);
 
@@ -106,7 +106,7 @@ public class AES_CipherTest extends TestCase {
 		
 		Key key = new SecretKeySpec(keyData, "WBAES");
 		
-		State plain  = new State(AEShelper.testVect256_plain[1], true,  false);
+		State plain  = new State(AEShelper.testVect128_plain[2], true,  false);
 		
 		AES_Cipher encryptor = new AES_Cipher();
 		try {
@@ -115,7 +115,7 @@ public class AES_CipherTest extends TestCase {
 		
 		byte[] outputEnc = new byte[dataLength];
 		try {
-			outputEnc = encryptor.engineDoFinal(AEShelper.testVect256_plain[1], 0, dataLength);
+			outputEnc = encryptor.engineDoFinal(AEShelper.testVect128_plain[2], 0, dataLength);
 		} catch (Exception e) {}
 		
 		
@@ -150,70 +150,72 @@ public class AES_CipherTest extends TestCase {
 	 */
 	public void testExceptions() {
 		System.out.println("Exception test");
-		
+
 		AES_Cipher encryptor = new AES_Cipher();
-		
+
 		byte[] outputEnc = new byte[16];
 		try {
 			outputEnc = encryptor.engineDoFinal(AEShelper.testVect128_plain[1], 0, 16);
 			fail("engineDoFinal()");
 		} catch (Exception e) {}
-		
+
 		AES_Cipher decryptor = new AES_Cipher();
-		
+
 		byte[] outputDec = new byte[16];
 		try {
 			outputDec = decryptor.engineDoFinal(outputEnc, 0, 16);
 			fail();
 		} catch (Exception e) {}
-				
+
 	}
-		
+
 	/**
 	 *  Serialization test
 	 */
 	public void testSerialization() {
 		System.out.println("Serialization test");
 		byte[] outputEnc = new byte[16];
-		
+
 		try {
 			SecureRandom random = new SecureRandom();
-		
-			Key key = new SecretKeySpec(AEShelper.testVect128_key, "WBAES");
-		
+
+			Key key = new SecretKeySpec(AEShelper.testVect128_key[0], "WBAES");
+
 			AES_Cipher encryptor = new AES_Cipher();
 			encryptor.engineInit(Cipher.ENCRYPT_MODE, key, random);
-			
+
 			outputEnc = encryptor.engineDoFinal(AEShelper.testVect128_plain[3], 0, 16);
 		} catch (Exception e) {
 			System.out.println("Exception " + e.getMessage());
 		}
-		
+
 		try {
 			SecureRandom random = new SecureRandom();
-		
-			Key key = new SecretKeySpec(AEShelper.testVect128_key, "WBAES");
-		
+
+			Key key = new SecretKeySpec(AEShelper.testVect128_key[0], "WBAES");
+
 			AES_Cipher decryptor = new AES_Cipher();
 			decryptor.engineInit(Cipher.DECRYPT_MODE, key, random);
-			
+
 			byte[] outputDec = new byte[16];
 			outputDec = decryptor.engineDoFinal(outputEnc, 0, 16);
-			
+
 			State plain_sour = new State(AEShelper.testVect128_plain[3], true,  false);
 			State plain_comp = new State(outputDec, true,  false);
-			
+
 			assertEquals("Plaintext output mismatch in API", true, plain_comp.equals(plain_sour));
-			
+
 		} catch (Exception e) {
 			System.out.println("Exception " + e.getMessage());
 		}
 	}
-		
+
 	/**
 	 *  Test with the null key
 	 */
 	public void testNullKey() {
+		System.out.println("Null key test - true if runs after testInitDoFinal, uses precomputed tables");
+		
 		try {
 			SecureRandom random = new SecureRandom();
 		
@@ -222,9 +224,9 @@ public class AES_CipherTest extends TestCase {
 			encryptor.engineInit(Cipher.ENCRYPT_MODE, null, random);
 		
 			byte[] outputEnc = new byte[16];
-			outputEnc = encryptor.engineDoFinal(AEShelper.testVect128_plain[1], 0, 16);
+			outputEnc = encryptor.engineDoFinal(AEShelper.testVect128_plain[0], 0, 16);
 		
-			State cipher = new State(AEShelper.testVect128_cipher[1], true, false);
+			State cipher = new State(AEShelper.testVect128_cipher_key1[0], true, false);
 		
 			System.out.println("Testvector ciphertext sour: \n"+ cipher);
 
@@ -233,8 +235,48 @@ public class AES_CipherTest extends TestCase {
 			System.out.println("Testvector ciphertext comp: \n" + cipher2);
 		
 			// problem with byte arrays comparison - used States
-			//assertEquals("Cipher output mismatch in API", true, cipher2.equals(cipher));
+			assertEquals("Cipher output mismatch in API", true, cipher2.equals(cipher));
 		} catch (Exception e) { fail("Serialization - exception thrown"); }
 	}
-	
+
+	public void testTestVectors() {
+		System.out.println("test vectors test");
+
+        SecureRandom random = new SecureRandom();
+		AES_Cipher encryptor = new AES_Cipher();
+
+		Key key = new SecretKeySpec(AEShelper.testVect128_key[0], "WBAES");
+		try {
+			encryptor.engineInit(Cipher.ENCRYPT_MODE, key, random);
+		} catch (InvalidKeyException e) {}
+
+		for(int i = 0; i<5; i++) {
+			byte[] outputEnc = new byte[16];
+			try {
+				outputEnc = encryptor.engineDoFinal(AEShelper.testVect128_plain[i], 0, 16);
+			} catch (Exception e) {}
+			
+			State cipher = new State(AEShelper.testVect128_cipher_key0[i], true, false);
+	        State cipher2  = new State(outputEnc, true, false);
+
+	        assertEquals("Cipher output mismatch in API, key0", true, cipher2.equals(cipher));
+		}
+
+		key = new SecretKeySpec(AEShelper.testVect128_key[1], "WBAES");
+		try {
+			encryptor.engineInit(Cipher.ENCRYPT_MODE, key, random);
+		} catch (InvalidKeyException e) {}
+
+		for(int i = 0; i<5; i++) {
+			byte[] outputEnc = new byte[16];
+			try {
+				outputEnc = encryptor.engineDoFinal(AEShelper.testVect128_plain[i], 0, 16);
+			} catch (Exception e) {}
+
+			State cipher = new State(AEShelper.testVect128_cipher_key1[i], true, false);
+	        State cipher2  = new State(outputEnc, true, false);
+
+	        assertEquals("Cipher output mismatch in API, key1", true, cipher2.equals(cipher));
+		}
+	}
 }

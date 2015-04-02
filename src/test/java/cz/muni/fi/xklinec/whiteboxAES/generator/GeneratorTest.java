@@ -149,10 +149,10 @@ public class GeneratorTest extends TestCase {
         gDec.setUseMB32x32Identity(true);
         
         // test with testvectors
-        gEnc.generate(true,  AEShelper.testVect128_key, 16, extc);
+        gEnc.generate(true,  AEShelper.testVect128_key[0], 16, extc);
         AES AESenc = gEnc.getAESi();
         // Decryption
-        gDec.generate(false, AEShelper.testVect128_key, 16, extc);
+        gDec.generate(false, AEShelper.testVect128_key[0], 16, extc);
         AES AESdec = gDec.getAESi();
         
         // Initialize structures for AES testing
@@ -221,7 +221,7 @@ public class GeneratorTest extends TestCase {
         for(i=0; i<AEShelper.AES_TESTVECTORS; i++){
             State plain  = new State(AEShelper.testVect128_plain[i], true,  false);
             State state  = new State(AEShelper.testVect128_plain[i], true,  false);
-            State cipher = new State(AEShelper.testVect128_cipher[i], true, false);
+            State cipher = new State(AEShelper.testVect128_cipher_key0[i], true, false);
             
             System.out.println("Testvector index: " + i);
             System.out.println("=====================");
@@ -268,10 +268,10 @@ public class GeneratorTest extends TestCase {
         gDec.setUseMB32x32Identity(false);
         
         // Generate AES for encryption
-        gEnc.generate(true, AEShelper.testVect128_key, 16, extc);
+        gEnc.generate(true, AEShelper.testVect128_key[0], 16, extc);
         AES AESenc = gEnc.getAESi();
         // Generate AES for decryption
-        gDec.generate(false, AEShelper.testVect128_key, 16, extc);
+        gDec.generate(false, AEShelper.testVect128_key[0], 16, extc);
         AES AESdec = gDec.getAESi();
         
         //
@@ -280,7 +280,7 @@ public class GeneratorTest extends TestCase {
         for(int i=0; i<AEShelper.AES_TESTVECTORS; i++){
             State plain  = new State(AEShelper.testVect128_plain[i], true,  false);
             State state  = new State(AEShelper.testVect128_plain[i], true,  false);
-            State cipher = new State(AEShelper.testVect128_cipher[i], true, false);
+            State cipher = new State(AEShelper.testVect128_cipher_key0[i], true, false);
             
             System.out.println("Testvector index: " + i);
             System.out.println("=====================");

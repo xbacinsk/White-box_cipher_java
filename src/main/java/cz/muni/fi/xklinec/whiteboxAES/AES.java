@@ -45,8 +45,8 @@ public class AES implements Serializable {
 	public static final int scrypt_p = 1;
 
 	public static final String SALT = "TheConstantSalt.";
-	public static final byte[] SBOXconstant = new byte[] {'S','b','o','x','M','a','g','i','c','C','o','n','s','t','a','n','t'};
-	public static final byte[] MDSconstant = new byte[] {'M','D','S','M','a','g','i','c','C','o','n','s','t','a','n','t'};
+	public static final byte[] SBOXconstant = new byte[] {'S','B','O','X','c','o','n','s','t','a','n','t'};
+	public static final byte[] MDSconstant = new byte[] {'M','D','S', 'c','o','n','s','t','a','n','t'};
 	
 	public static final int BYTES  = State.BYTES;
     public static final int ROUNDS = 10;
@@ -100,9 +100,9 @@ public class AES implements Serializable {
             ares[i] = new State();
         }
         /*
-        System.out.println("line 94");
-        System.out.println(state);*/
-        
+        System.out.println("line 103");
+        System.out.println(state);
+        */
         // At first we have to put input to T1 boxes directly, no shift rows
 	// compute result to ares[16]
 	for(i=0; i<BYTES; i++){
@@ -114,9 +114,9 @@ public class AES implements Serializable {
         xorState[0].xor(ares);
         state.loadFrom(ares[0]);
         /*
-        System.out.println("line 107");
-        System.out.println(state);*/
-        
+        System.out.println("line 117");
+        System.out.println(state);
+        */
         // Compute 9 rounds of T2 boxes
         for(r=0; r<ROUNDS-1; r++){
             // Apply type 2 tables to all bytes, counting also shift rows selector.
@@ -129,7 +129,7 @@ public class AES implements Serializable {
             xorState2[r].xor(ires2);
             state.loadFrom(ires2[0]);
             /*
-            System.out.println("line 121");
+            System.out.println("line 132");
             System.out.println(state);
             */
             for(i=0; i<BYTES; i++){
@@ -138,6 +138,7 @@ public class AES implements Serializable {
             
             xorState3[r].xor(ires3);
             state.loadFrom(ires3[0]);
+            
                 
                 // Copy results back to state,
                 // valid XOR results are in 32bit ires[0], ires[4], ires[8], ires[12]
@@ -156,7 +157,10 @@ public class AES implements Serializable {
         // now compute XOR cascade from 16 x 128bit result after T1 application.
         xorState[1].xor(ares);
         state.loadFrom(ares[0]);
-        
+        /*
+        System.out.println("line 161");
+        System.out.println(state);
+        */
         return state;
     }
     

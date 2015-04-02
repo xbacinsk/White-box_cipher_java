@@ -99,7 +99,7 @@ public class AEShelperTest extends TestCase {
         a.build(true);
         
         // test sample key schedule
-        byte[] roundKey = a.keySchedule(AEShelper.testVect128_key, 16, false);
+        byte[] roundKey = a.keySchedule(AEShelper.testVect128_key[0], 16, false);
         
         // test copy of key
         for(int i=0; i<16; i++){
@@ -290,7 +290,7 @@ public class AEShelperTest extends TestCase {
         System.out.println("- plaintext_string: " + plaintext_string);
 
     	// key from AES test vectors
-        byte key[] = AEShelper.testVect128_key;
+        byte key[] = AEShelper.testVect128_key[0];
         State key_string  = new State(key, true,  false);
         System.out.println("- key_string: " + key_string);
 
@@ -415,7 +415,7 @@ public class AEShelperTest extends TestCase {
                 //State roundKeyForMDS_string  = new State(roundKeyForMDS, true,  false);
                 //System.out.println("- roundKeyForMDS_string: " + roundKeyForMDS_string);
             	
-                // MDS matrix generation //TODO zistit, ci sa MDS16x16 vyraba skutocne ako chcem
+                // MDS matrix generation
         		int[][] MDS16x16int = a.createMDS16x16(roundKeyForMDS, true);
         		//byte[][] MDS16x16byte = new byte[16][16];
         		//for(int i = 0; i<16; i++)
@@ -424,6 +424,10 @@ public class AEShelperTest extends TestCase {
                 //State firstRowMDS_string  = new State(MDS16x16byte[0], true,  false);
                 //System.out.println("- firstRowMDS_string: " + firstRowMDS_string);
 
+        		if(MDS16x16int == null) {
+        			System.out.println("Generated matrix is null, a constant one should be used!");
+        			MDS16x16int = a.getMDS16x16();
+        		}
 
         		// transpose
     		    state_bytes[0] = plaintext[0];
