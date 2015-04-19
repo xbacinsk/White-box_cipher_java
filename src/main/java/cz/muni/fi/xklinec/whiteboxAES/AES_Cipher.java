@@ -619,13 +619,12 @@ public final class AES_Cipher extends CipherSpi {
 			
 			state  = new State(processingBlock, true,  false);
 			state.transpose();
-            generator.applyExternalEnc(state, extb, true); //?
+            generator.applyExternalEnc(state, extb, true); // canceling the effect of external encodings in the first round
             coreAES.crypt(state);
-            generator.applyExternalEnc(state, extb, false); //?
+            generator.applyExternalEnc(state, extb, false); // canceling the effect of external encodings in the last round
             
             System.arraycopy(state.getState(), 0, output, outputOffset + outputLength, blockSize);
 			outputLength += blockSize;
-			outputOffset += blockSize; //???
 		}
 		
 		dataBufferActiveLength = length % blockSize;
