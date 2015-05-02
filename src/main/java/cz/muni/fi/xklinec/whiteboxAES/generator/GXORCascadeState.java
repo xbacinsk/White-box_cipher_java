@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Dusan (Ph4r05) Klinec, Petr Svenda
+ * Copyright (c) 2014, Dusan (Ph4r05) Klinec, Lenka Bacinska, Petr Svenda
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

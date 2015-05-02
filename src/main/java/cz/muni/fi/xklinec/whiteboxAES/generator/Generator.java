@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Dusan (Ph4r05) Klinec, Petr Svenda
+ * Copyright (c) 2014, Dusan (Ph4r05) Klinec, Lenka Bacinska, Petr Svenda
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -461,7 +461,7 @@ public class Generator {
         cod.IC.H = xtb.xtb[(offset)+1].OC.L;                                          
     }
     
-    // TODO XOR to 128
+    // NOTE XOR to 128
 	public static void CONNECT_XOR_TO_W08x128(XORCODING xtb, int offset, W08x128Coding cod) {
         cod.IC.type = xtb.xtb[(offset)+0].OC.type;
         
@@ -580,7 +580,7 @@ public class Generator {
     private boolean debug = false;
     private SecureRandom rand = new SecureRandom();
     
-    private boolean useIO04x04Identity=true; //TODO
+    private boolean useIO04x04Identity=true;
     private boolean useIO08x08Identity=true;
     private boolean useMB08x08Identity=true;
     private boolean useMB32x32Identity=true;
@@ -920,11 +920,6 @@ public class Generator {
 	System.out.println("Generating first round tables (T1) ");
         generateT1Tables();
 	
-        
-    //-------------------------------------------------------------------------------------------
-    //TODO miesto Generate round keys s AESh.keySchedule() treba AESh.hashChain()
-    //----------------------------------------------------------------------------------------
-        
         // Generate round keys
         System.out.println("Computing key schedule ");
         byte[] keySchedule = AESh.hashChain(key, keySize, AES.SALT, debug);
@@ -1093,10 +1088,6 @@ public class Generator {
                             }
                         }
                         
-          //---------------------------------------------------------------------------
-          //TODO Miesto ByteSub s konstantnymi S-boxes treba S-boxes zavisle na kluci - DONE
-          //-------------------------------------------------------------------------
-                        
                         // SBox transformation with dedicated AES for this round and section
                         // Encryption: ByteSub
                         // Decryption: ByteSubInv
@@ -1138,8 +1129,6 @@ public class Generator {
                             continue;
                         }
 
-    //TODO miesto MixColumn s maticou 4x4 treba hodit nasobenie maticou MDS16x16 - tu je treba niekde na zaciatku vyrobit (createMDS16x16())
-
                         //
                         // MDS matrix multiplication, Mixing bijection part
                         //	only in case 1..9 round
@@ -1147,96 +1136,11 @@ public class Generator {
                         // Build [0 tmpE 0 0]^T stripe where tmpE is in j-th position
                         GF2mMatrixEx zj = new GF2mMatrixEx(field, 16, 1);
                         zj.set(idx, 0, tmpE); //Must iterate through columns as above, 4*j+i
-                        //if(encrypt) //TODO bacha, jednotkova matica!
+                        //if(encrypt)
                         	mcres = r < (AES.ROUNDS - 1) ? AESh.getMDS16x16Mat_array()[r].rightMultiply(zj) : zj;
                         //else
                            // mcres = r < (AES.ROUNDS - 1) ? AESh.getMDS16x16Mat_array()[8-r].rightMultiply(zj) : zj; //[0] - now it uses only one matrix for all rounds - I'm not sure if it would be better to have one MDS matrix for each round
-                        	
-                        	//System.out.println("MDS r=" + r + ": " + AESh.getMDS16x16Mat_array()[r]);
-                        	
-                        /*
-                        mPreMB = NTLUtils.GF2mMatrix_to_GF2Matrix_col(mcres, 8);
-                        mPreMB = (GF2MatrixEx) eMB_MB128x128[r][i].getMb().rightMultiply(mPreMB); //TODO instead of i should be j*4+i
-				
-                        State mapResult128 = new State();
-                        // Encode 128-bit wide output to map result
-                        for (int jj = 0; jj < 16; jj++) {
-                            mapResult128.set(NTLUtils.colBinaryVectorToByte(mPreMB, jj * 8, 0), jj);
-                        }
-                        
-                        // Encode mapResult with out encoding of T2 table
-                        iocoding_encode128x128(mapResult128, mapResult128, t2C[r][idx].getCod(), false, pCoding04x04, pCoding08x08);
-                        // Store result value to lookup table
-                        t2[r][idx].getTbl()[b].setState(mapResult128.getState());
-                        */
-                        /*
-                        GF2mMatrixEx mcres_array[] = new GF2mMatrixEx[4];
-                        GF2MatrixEx mPreMB_array[] = new GF2MatrixEx[4];
-                        long mapResult_array[] = new long[4];
-                        W32b wb_array[] = new W32b[4];
 
-                        for(int ii = 0; ii<4; ii++)
-                        	mcres_array[ii] = new GF2mMatrixEx(field, 4, 1);
-
-                    	for(int ii = 0; ii<4; ii++)
-                    		for(int jj = 0; jj<4; jj++)
-                        		mcres_array[ii].set(jj, 0, mcres.get(jj + 4*ii, 0));
-                        
-                        for(int ii = 0; ii<4; ii++) {
-                            mPreMB_array[ii] = NTLUtils.GF2mMatrix_to_GF2Matrix_col(mcres_array[ii], 8);
-                            mPreMB_array[ii] = (GF2MatrixEx) eMB_MB32x32[r][i].getMb().rightMultiply(mPreMB_array[ii]); //TODO instead of i should be j*4+i
-                        }*/
-                        /*
-                        System.out.println("Matrices:");
-                        System.out.println(eMB_MB32x32[2][0].getMb());
-                        System.out.println(eMB_MB32x32[2][0].getInv());
-//------------------
-                        for(int g = 0; g<16*4; g++) {
-	                        GF2mMatrixEx pok = new GF2mMatrixEx(field, AEShelper.vectX[g]);
-	                        System.out.println("pok " + g + ":");
-	                        System.out.println(pok);
-	                        
-	                        GF2MatrixEx mPok = NTLUtils.GF2mMatrix_to_GF2Matrix_col(pok, 8);
-	                        System.out.println("mPok " + g + ":");
-	                        System.out.println(mPok);
-	                        
-	                        GF2MatrixEx multPok = (GF2MatrixEx) eMB_MB32x32[2][0].getMb().rightMultiply(mPok);
-	                        System.out.println("Multiplication " + g + ":");
-	                        System.out.println(multPok);
-
-	                        long lPok = NTLUtils.GF2Matrix_to_long(mPok, 0, 0);
-                            W32b wbPok = new W32b();
-                            wbPok.set(lPok);
-	                        System.out.println("wbPok " + g + ":");
-	                        System.out.println(wbPok);
-	                        
-	                        long lPok1 = NTLUtils.GF2Matrix_to_long(multPok, 0, 0);
-                            W32b wbPok1 = new W32b();
-                            wbPok1.set(lPok1);
-	                        System.out.println("wbPok1 " + g + ":");
-	                        System.out.println(wbPok1);
-                        }
-//-------------------*//*
-                        for(int ii = 0; ii<4; ii++)
-                            mapResult_array[ii] = NTLUtils.GF2Matrix_to_long(mPreMB_array[ii], 0, 0);
-
-                        //for(int ii = 0; ii<4; ii++)
-                        //    mapResult_array[ii] = iocoding_encode32x32(mapResult_array[ii], t3C[r][idx].getCod(), false, pCoding04x04, pCoding08x08);
-
-                        for(int ii = 0; ii<4; ii++) {
-                            wb_array[ii] = new W32b();
-                            wb_array[ii].set(mapResult_array[ii]);
-                        }
-                                                
-                        State mapResult128 = new State();
-                        
-                        for(int ii = 0; ii<4; ii++)
-                        	for(int jj = 0; jj<4; jj++)
-                        		mapResult128.set(wb_array[ii].get()[jj], ii, jj);
-                        */
-                        
-                        
-                        
                         mPreMB = NTLUtils.GF2mMatrix_to_GF2Matrix_col(mcres, 8);
                         mPreMB = (GF2MatrixEx) eMB_MB128x128[r][0].getMb().rightMultiply(mPreMB); //[r][0] means, that in each round only one MB matrix is used
                                                 
@@ -1278,18 +1182,7 @@ public class Generator {
                         //NTLUtils.putByteAsColVector(tmpMat, (byte) bb, (4*i+j) * 8, 0);
                         // Build MB multiplication result
                         mPreMB = (GF2MatrixEx) eMB_MB128x128[r][0].getInv().rightMultiply(mPreMB);
-                        /*
-                        System.out.println("Mb:");
-                        System.out.println(eMB_MB128x128[1][1].getMb());
-                        System.out.println("Inv:");
-                        System.out.println(eMB_MB128x128[1][1].getInv());
-                        */
-                        // Encode using L mixing bijection (another matrix multiplication)
-                        // Map bytes from result via L bijections
-/*
-                        System.out.println("mPreMB:");
-                        System.out.println(mPreMB);
-*/
+
                         State mapResult128 = new State();
                         for(int iii = 0; iii<4; iii++) {
 	                        mapResult = 0;
@@ -1314,40 +1207,6 @@ public class Generator {
                         // Store result value to lookup table
                         t3[r][idx].getTbl()[posIdx(b)] = mapResult128;
                     }
-                    /*
-                    // Build tables - for each byte
-                    for (b = 0; b < 256; b++) {
-                    long mapResult;
-                    int bb = b;
-                    // Decode with IO encoding
-                    bb = iocoding_encode08x08((byte) b, t3C[r][idx].getCod().IC, true, pCoding04x04, pCoding08x08);
-                    // Transform bb to matrix, to perform mixing bijection operation (matrix multiplication)
-                    GF2MatrixEx tmpMat = new GF2MatrixEx(32, 1);
-                    // builds binary matrix [0 0 bb 0], if j==2
-                    NTLUtils.putByteAsColVector(tmpMat, (byte) bb, j * 8, 0);
-                    //System.out.println(tmpMat);
-                    // Build MB multiplication result
-                    tmpMat = (GF2MatrixEx) eMB_MB32x32[r][i].getInv().rightMultiply(tmpMat);
-                    // Encode using L mixing bijection (another matrix multiplication)
-                    // Map bytes from result via L bijections
-                    /*
-                    System.out.println("tmpMat " + r + " " + i + " " + j + " " + b);
-                    System.out.println(tmpMat);
-                    *//*
-                    mapResult = 0;
-                    mapResult |= Utils.byte2long(Lr_k_table[0][posIdx(NTLUtils.colBinaryVectorToByte(tmpMat, 8 * 0, 0))], 0);
-                    mapResult |= Utils.byte2long(Lr_k_table[1][posIdx(NTLUtils.colBinaryVectorToByte(tmpMat, 8 * 1, 0))], 1);
-                    mapResult |= Utils.byte2long(Lr_k_table[2][posIdx(NTLUtils.colBinaryVectorToByte(tmpMat, 8 * 2, 0))], 2);
-                    mapResult |= Utils.byte2long(Lr_k_table[3][posIdx(NTLUtils.colBinaryVectorToByte(tmpMat, 8 * 3, 0))], 3);
-                    // Encode mapResult with out encoding
-                    mapResult = iocoding_encode32x32(mapResult, t3C[r][idx].getCod(), false, pCoding04x04, pCoding08x08);
-                    // Store result value to lookup table
-                    t3[r][idx].getTbl()[posIdx(b)] = mapResult;
-                    }
-                    */
-                    
-                    
-                    
                 }
             }
         }

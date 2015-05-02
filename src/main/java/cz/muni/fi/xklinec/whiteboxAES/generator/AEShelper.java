@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Dusan (Ph4r05) Klinec, Petr Svenda
+ * Copyright (c) 2014, Dusan (Ph4r05) Klinec, Lenka Bacinska, Petr Svenda
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -283,36 +283,6 @@ public class AEShelper {
 	        	MDS16x16Mat.set(i, c, MDS16x16[i][c]);
 	        }
 		}
-		//TODO zrusit MixColumn
-///*
-		// 6. MixColumn operations
-		// modulus x^4 + 1
-		mixColModulus[0] = g[0];
-		mixColModulus[4] = g[0];
-	
-		// 03 x^3 + 01 x^2 + 01 x + 02
-		mixColMultiply[0] = g[25];
-		mixColMultiply[1] = g[0];
-		mixColMultiply[2] = g[0];
-		mixColMultiply[3] = g[1];
-	
-		// inverse polynomial
-		mixColMultiplyInv[0] = g[223];
-		mixColMultiplyInv[1] = g[199];
-		mixColMultiplyInv[2] = g[238];
-		mixColMultiplyInv[3] = g[104];
-	
-		// MixCols multiplication matrix based on mult polynomial -  see Rijndael description of this.
-		// Polynomials have coefficients in GF(256).
-		mixColMat    = new GF2mMatrixEx(field, 4, 4);
-	        mixColInvMat = new GF2mMatrixEx(field, 4, 4);
-		for(i=0; i<4; i++){
-	            for(c=0; c<4; c++){
-	                mixColMat.set(i, c, mixColMultiply[(i+4-c) % 4]);
-	                mixColInvMat.set(i, c, mixColMultiplyInv[(i+4-c) % 4]);
-	            }
-		}
-//*/
 
 		// Round key constant RC (for key schedule) obeys this reccurence:
 		// RC[0] = 1
@@ -686,7 +656,7 @@ public class AEShelper {
     		case 2: return s2_k4_k5[round][AES.posIdx(e)];
     		case 3: return s3_k6_k7[round][AES.posIdx(e)];   	
     	}
-    	return 0; //TODO skontrolovat, ci sa to niekedy nestane
+    	return 0;
     }
     
     /**
@@ -705,7 +675,7 @@ public class AEShelper {
     		case 2: return s2_k4_k5_inv[round][AES.posIdx(e)];
     		case 3: return s3_k6_k7_inv[round][AES.posIdx(e)];   	
     	}
-    	return 0; //TODO skontrolovat, ci sa to niekedy nestane
+    	return 0;
     }
     
 
@@ -809,7 +779,7 @@ public class AEShelper {
     }
 
     /*
-     * TODO the permutation functions should be MACROs?
+     * The permutation function for MDS matrices generation
      */
 
     private int[] permutationMDS(int[] inputRow, int par) {
@@ -851,7 +821,6 @@ public class AEShelper {
 			MDS16x16[i+1] = permutationMDS(MDS16x16[i], 2);
 	}
 	
-	//TODO a better solution for this
     private boolean contains(final int[] array, final int key) {
         for (final int i : array) {
             if (i == key) {
@@ -872,7 +841,7 @@ public class AEShelper {
 		
 		Set<Integer> set = new LinkedHashSet<Integer>();
 		for(i = 0; i<16; i++) {
-			set.add((key[i] & 0x3f)); //TODO smaller numbers (5 bits)? I think 6 bits is a good compromise
+			set.add((key[i] & 0x3f)); //NOTE smaller numbers (5 bits)? I think 6 bits is a good compromise
 			set.add(((key[i] >>> 2) & 0x3f));
 		}
 
@@ -922,7 +891,6 @@ public class AEShelper {
 	}
 	
 	/**
-	 * TODO different key schedule than round keys, like for S-boxes
 	 * Generates MDS matrices from the given key schedule - one matrix per round
 	 * 
 	 * @param keySchedule

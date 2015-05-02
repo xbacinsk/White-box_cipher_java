@@ -53,8 +53,7 @@ public class App
         final int[][] a = m.getIntArray();
         for(int i=0; i<m.getNumRows(); i++){
             System.out.println("MatrixEnc["+i+"]: [" + Utils.toBinaryString(a[i])+ "]");
-        }
-        System.out.println("Hmmmmmmmmmmmmm");        
+        }      
         System.out.println("MatrixEncLen: [" + m.getEncoded().length + "]");
         System.out.println("MatrixEncHex: [" + IntUtils.toHexString(m.getRow(0)) + "]");
 

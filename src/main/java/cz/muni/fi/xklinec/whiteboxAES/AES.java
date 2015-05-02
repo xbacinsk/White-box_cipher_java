@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Dusan (Ph4r05) Klinec, Petr Svenda
+ * Copyright (c) 2014, Dusan (Ph4r05) Klinec, Lenka Bacinska, Petr Svenda
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,7 +40,7 @@ public class AES implements Serializable {
 
 	private static final long serialVersionUID = 1L; // added serialization
 
-	public static final int scrypt_N = 16384; //2^14 = 5sec, maybe change to 2^16 = 20sec
+	public static final int scrypt_N = 16384; //2^14 = 5sec, NOTE maybe change to 2^16 = 20sec
 	public static final int scrypt_r = 8;
 	public static final int scrypt_p = 1;
 
@@ -120,8 +120,6 @@ public class AES implements Serializable {
         // Compute 9 rounds of T2 boxes
         for(r=0; r<ROUNDS-1; r++){
             // Apply type 2 tables to all bytes, counting also shift rows selector.
-            // One section ~ 1 column of state array, so select 1 column, first will
-            // have indexes 0,4,8,12. Also take ShiftRows() into consideration.
             for(i=0; i<BYTES; i++){
                 ires2[i].loadFrom(t2[r][i].lookup(state.get(shift(i))));
             }
@@ -138,12 +136,7 @@ public class AES implements Serializable {
             
             xorState3[r].xor(ires3);
             state.loadFrom(ires3[0]);
-            
-                
-                // Copy results back to state,
-                // valid XOR results are in 32bit ires[0], ires[4], ires[8], ires[12]
-                //state.setColumn(ires3[i], i);
-            
+
         }
         
         //
@@ -158,7 +151,7 @@ public class AES implements Serializable {
         xorState[1].xor(ares);
         state.loadFrom(ares[0]);
         /*
-        System.out.println("line 161");
+        System.out.println("line 154");
         System.out.println(state);
         */
         return state;
