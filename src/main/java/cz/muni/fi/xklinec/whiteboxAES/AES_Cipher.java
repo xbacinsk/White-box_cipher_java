@@ -101,7 +101,7 @@ public final class AES_Cipher extends CipherSpi {
 		if(dataLength == blockSize) dataLength = 0;
 		
 		if(paddingScheme == 5) {
-			byte missingBytesNum = (byte)(blockSize - dataLength); //spravna operace?
+			byte missingBytesNum = (byte)(blockSize - dataLength);
 			for(int iter = dataOffset; iter<data.length; iter++) {
 				data[iter] = missingBytesNum;
 			}
@@ -109,11 +109,11 @@ public final class AES_Cipher extends CipherSpi {
 	}
 	
 	/*
-	 * Counts length od padding to be able to remove it
+	 * Counts length of padding to be able to remove it
 	 */
 	private int paddingCount(byte[] data) throws BadPaddingException {
 	
-	    int count = data.length - 1; //?
+	    int count = data.length - 1;
 
 	    if(paddingScheme == 1 || paddingScheme == 2)
 		    while (count > 0 && data[count] == 0) count--;
@@ -165,7 +165,7 @@ public final class AES_Cipher extends CipherSpi {
 		byte[] out = new byte[engineGetOutputSize(inputLen)];
 		try {
 			length = engineDoFinal(input, inputOffset, inputLen, out, 0);
-		} catch(ShortBufferException e) { /*?*/ }
+		} catch(ShortBufferException e) { e.printStackTrace(); }
 
 		if(length != out.length) {
 			byte[] output = new byte[length];
@@ -233,14 +233,11 @@ public final class AES_Cipher extends CipherSpi {
 		int lastBlockSize = length % blockSize;
 		if(lastBlockSize == 0 && length > 0 && paddingScheme != 0)
 			lastBlockSize = blockSize;
-		//int lastBlockOffset = length - lastBlockSize;
-		//int blocksNumber = lastBlockOffset / blockSize;
 
 		if(isEncrypting && paddingScheme != 0) {
 			addPadding(dataBufferWithInput, length, lastBlockSize);
 		}
 
-		// prepisat outputLength s length a i - abo asi radsi nechat, ale s while
 		int outputLength = 0;
 		for(int i = 0; i < outputSize; i += blockSize) {
 			byte[] processingBlock = new byte[blockSize];
@@ -304,7 +301,7 @@ public final class AES_Cipher extends CipherSpi {
      * @return the required output buffer size (in bytes)
      */
 	protected int engineGetOutputSize(int inputLen) {
-		int size = dataBufferActiveLength + inputLen; //ak sa nebude pridavat padding, rovno hodit do return
+		int size = dataBufferActiveLength + inputLen;
 
 		int blockSize = engineGetBlockSize();
 		int blocksNumber = (size + blockSize - 1) / blockSize;
@@ -517,7 +514,7 @@ public final class AES_Cipher extends CipherSpi {
      */
 	protected void engineSetMode(String mode) throws NoSuchAlgorithmException {
 		if(mode == null)
-			throw new NoSuchAlgorithmException("Mode is null"); // urcite treba vynimku?    
+			throw new NoSuchAlgorithmException("Mode is null");   
 		if(!mode.equals("ECB"))
 			throw new NoSuchAlgorithmException("Only ECB mode is supported");
 	}
@@ -532,7 +529,7 @@ public final class AES_Cipher extends CipherSpi {
 	// state sa pri vytvarani orezava/predlzuje (ak je copy true) na 16*8 bits
 	protected void engineSetPadding(String padding) throws NoSuchPaddingException {
 		if(padding == null)
-			throw new NoSuchPaddingException("Padding is null"); // urcite treba vynimku? tuto asi ne
+			throw new NoSuchPaddingException("Padding is null");
 		else if(padding.equalsIgnoreCase("NoPadding")) paddingScheme = 0;
 		else if(padding.equalsIgnoreCase("ISO9797M1Padding")) paddingScheme = 1;
 		else if(padding.equalsIgnoreCase("ISO9797M2Padding")) paddingScheme = 2;
@@ -562,7 +559,7 @@ public final class AES_Cipher extends CipherSpi {
 		byte[] out = new byte[engineGetOutputSize(inputLen)];
 		try {
 			length = engineUpdate(input, inputOffset, inputLen, out, 0);
-		} catch(ShortBufferException e) { /* */ }
+		} catch(ShortBufferException e) { e.printStackTrace(); }
 
 		if(length != out.length) {
 			byte[] output = new byte[length];
@@ -642,7 +639,7 @@ public final class AES_Cipher extends CipherSpi {
      *
      * @exception InvalidKeyException if <code>key</code> is invalid.
      */
-	// use only in secure environment?
+	// use only in secure environment
 	protected int engineGetKeySize(Key key) throws InvalidKeyException{
 		return getKey(key).length;
 	}

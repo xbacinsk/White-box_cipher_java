@@ -243,39 +243,22 @@ public class AEShelper {
 	        // Normal Sbox:      S(x) = const    +   A(x^{-1})
 		// Sbox in Dual AES: G(x) = T(const) + T(A(T^{-1}(x^{-1})))
 		for(i=0; i<AES_FIELD_SIZE; i++){
-	            int tmpRes;
-	
-	            // i is now long representation, gInv transforms it to exponent power to obtain inverse.
-	            // Also getLong(g[gInv[i]]) == i
-	            int transValue = i==0 ? 0 : g[255-gInv[i]];
-	
-	            // tmpM = col vector of transValue
-	            NTLUtils.zero(tmpM);
-	            NTLUtils.putByteAsColVector(tmpM, (byte)transValue, 0, 0);
-	            
-	            // const + A(x^{-1})
-	            GF2MatrixEx resMatrix = (GF2MatrixEx) afM.rightMultiply(tmpM);
-	            tmpRes = (byte) field.add(NTLUtils.colBinaryVectorToByte(resMatrix, 0, 0), afC) & 0xff;
-	
-	
-	            // S-box was created here, key-dependent S-boxes must be created before this function call
-	            //sboxAffine[i] = tmpRes; //will be deleted
-	            //sboxAffineInv[tmpRes] = i; //will be deleted
-	
-	
-	            // Inversion, idea is the same, i is the long representation of element in GF, apply inverted affine transformation and take inverse
-	            // Ax^{-1} + c is input to this transformation
-	            //              [A^{-1} * (A{x^-1} + c) + d]^{-1} is this transformation;
-	            // correctness: [A^{-1} * (Ax^-1   + c) + d]^{-1} =
-	            //				[A^{-1}Ax^{-1} + A^{-1}c + d]^{-1} =	//	A^{-1}c = d
-	            //				[x^{-1}        + 0]^{-1} =
-	            //				x
-	            //
-	            // Computation is useless, we have inversion of transformation right from transformation above
-	            // by simply swapping indexes. This is just for validation purposes to show, that it really works and how
+	        int tmpRes;
+
+	        // i is now long representation, gInv transforms it to exponent power to obtain inverse.
+	        // Also getLong(g[gInv[i]]) == i
+	        int transValue = i==0 ? 0 : g[255-gInv[i]];
+
+	        // tmpM = col vector of transValue
+	        NTLUtils.zero(tmpM);
+	        NTLUtils.putByteAsColVector(tmpM, (byte)transValue, 0, 0);
+
+	        // const + A(x^{-1})
+	        GF2MatrixEx resMatrix = (GF2MatrixEx) afM.rightMultiply(tmpM);
+	        tmpRes = (byte) field.add(NTLUtils.colBinaryVectorToByte(resMatrix, 0, 0), afC) & 0xff;
 		}
 				
-		
+		// generation  of constant MDS matrix in case some non-suitable round key is derived
 		createMDS16x16();
 		MDS16x16Mat = new GF2mMatrixEx(field, 16, 16);
 		for(i=0; i<16; i++){
@@ -475,6 +458,7 @@ public class AEShelper {
      * 
      * @param key
      * @param size
+     * @param saltString
      * @param debug
      * @return
      */
@@ -494,14 +478,12 @@ public class AEShelper {
     	for(i = 0; i < roundsNum + 1; i++) {
     		
     		if(i == 0)
-    			//tmpKey = SCrypt.generate(key, salt, 16, 1, 1, size);
     			tmpKey = hashFunction(key, salt, size, AES.scrypt_N, AES.scrypt_r, AES.scrypt_p, 16);
     		else {
 	    		byte[] hashInput = new byte[2*size];
 	    		System.arraycopy(tmpKey, 0, hashInput, 0, size);
 	    		System.arraycopy(key, 0, hashInput, size, size);
-	    		
-	    		//tmpKey = SCrypt.generate(hashInput, salt, 16, 1, 1, size);
+
 	    		tmpKey = hashFunction(hashInput, salt, size, AES.scrypt_N, AES.scrypt_r, AES.scrypt_p, 16);
     		}
     		
@@ -528,7 +510,7 @@ public class AEShelper {
     	
     	for(i = 0; i < n_sha; i++) {
     		try {
-	    		MessageDigest md = MessageDigest.getInstance("SHA-256"); //SHA256 in Dusan's thesis
+	    		MessageDigest md = MessageDigest.getInstance("SHA-256");
 	    		md.update(tmpInput);
 	    		tmpInput = md.digest();
     		} catch(Exception e) { //NoSuchAlgorithmException
@@ -554,6 +536,7 @@ public class AEShelper {
     	System.arraycopy(key, 0, input, 0, key.length);
     	System.arraycopy(magicConstant, 0, input, key.length, magicConstant.length);
     	
+    	//concatenation with "SBOXconstant" string used as input (different keys for encryption and S-boxes generation)
         byte[] roundKeysForSboxes = hashChain(input, size, AES.SALT, false);
     	
     	for(r = 0; r<roundKeysForSboxes.length/size-1; r++) {
@@ -806,7 +789,7 @@ public class AEShelper {
 		int firstRow[] = new int[] { //last byte is computed from previous 15 using XOR through all of them and 0x01
 			0x01, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
 			0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x10, 0x02, 0x1e
-		}; //what is better: byte or int?
+		};
 		
 		MDS16x16[0] = firstRow;
 		MDS16x16[2] = permutationMDS(MDS16x16[0], 4);

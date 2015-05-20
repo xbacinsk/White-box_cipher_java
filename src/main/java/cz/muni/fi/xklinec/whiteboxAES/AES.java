@@ -40,7 +40,7 @@ public class AES implements Serializable {
 
 	private static final long serialVersionUID = 1L; // added serialization
 
-	public static final int scrypt_N = 16384; //2^14 = 5sec, NOTE maybe change to 2^16 = 20sec
+	public static final int scrypt_N = 16384; //2^14
 	public static final int scrypt_r = 8;
 	public static final int scrypt_p = 1;
 
@@ -72,7 +72,6 @@ public class AES implements Serializable {
     protected XORCascadeState[] xorState3 = new XORCascadeState[ROUNDS];
     protected T2Box[][]         t2       = new T2Box[ROUNDS][State.BYTES];
     protected T3Box[][]         t3       = new T3Box[ROUNDS][State.BYTES];
-    //protected XORCascade[][]    xor      = new XORCascade[ROUNDS][State.BYTES];
     private boolean           encrypt  = true;
 
     public static int posIdx(byte x){
@@ -88,10 +87,11 @@ public class AES implements Serializable {
      * @param in 
      */
     public State crypt(State state){
-        int r=0, i=0;
-	State ires3[] = new State[BYTES];	// intermediate result for T2,T3-boxes
-	State ires2[] = new State[BYTES];	// intermediate result for T2,T3-boxes
-	State ares[] = new State[BYTES];	// intermediate result for T1-boxes
+        int r = 0, i = 0;
+        
+        State ires3[] = new State[BYTES];	// intermediate result for T2,T3-boxes
+        State ires2[] = new State[BYTES];	// intermediate result for T2,T3-boxes
+        State ares[] = new State[BYTES];	// intermediate result for T1-boxes
         
         // initialize ires, ares at first
         for(i=0; i<BYTES; i++){
@@ -99,24 +99,18 @@ public class AES implements Serializable {
             ires2[i] = new State();
             ares[i] = new State();
         }
-        /*
-        System.out.println("line 103");
-        System.out.println(state);
-        */
+        
         // At first we have to put input to T1 boxes directly, no shift rows
-	// compute result to ares[16]
-	for(i=0; i<BYTES; i++){
+        // compute result to ares[16]
+        for(i=0; i<BYTES; i++){
             // Note: Tbox is indexed by cols, state by rows - transpose needed here
-            ares[i].loadFrom( t1[0][i].lookup(state.get(i)) );
+            ares[i].loadFrom(t1[0][i].lookup(state.get(i)));
         }
         
         // now compute XOR cascade from 16 x 128bit result after T1 application.
         xorState[0].xor(ares);
         state.loadFrom(ares[0]);
-        /*
-        System.out.println("line 117");
-        System.out.println(state);
-        */
+
         // Compute 9 rounds of T2 boxes
         for(r=0; r<ROUNDS-1; r++){
             // Apply type 2 tables to all bytes, counting also shift rows selector.
@@ -126,10 +120,7 @@ public class AES implements Serializable {
             
             xorState2[r].xor(ires2);
             state.loadFrom(ires2[0]);
-            /*
-            System.out.println("line 132");
-            System.out.println(state);
-            */
+
             for(i=0; i<BYTES; i++){
             	ires3[i].loadFrom(t3[r][i].lookup(state.get(i)));
             }
@@ -140,20 +131,17 @@ public class AES implements Serializable {
         }
         
         //
-	// Final round is special -> T1 boxes
-	//
+        // Final round is special -> T1 boxes
+        //
         for(i=0; i<BYTES; i++){
             // Note: Tbox is indexed by cols, state by rows - transpose needed here
-            ares[i].loadFrom( t1[1][i].lookup(state.get(shift(i))) );
+            ares[i].loadFrom(t1[1][i].lookup(state.get(shift(i))));
         }
         
         // now compute XOR cascade from 16 x 128bit result after T1 application.
         xorState[1].xor(ares);
         state.loadFrom(ares[0]);
-        /*
-        System.out.println("line 154");
-        System.out.println(state);
-        */
+
         return state;
     }
     
@@ -202,7 +190,6 @@ public class AES implements Serializable {
         xorState3  = new XORCascadeState[ROUNDS];
         t2        = new T2Box[ROUNDS][BYTES];
         t3        = new T3Box[ROUNDS][BYTES];
-        //xor       = new XORCascade[ROUNDS][2*State.COLS];
 
         for(r=0; r<ROUNDS; r++){
             //
@@ -228,13 +215,6 @@ public class AES implements Serializable {
                 //
                 t2[r][i] = new T2Box();
                 t3[r][i] = new T3Box();
-                /*
-                //
-                // XOR cascade
-                //
-                if (i < 2*State.COLS){
-                    xor[r][i] = new XORCascade();
-                }*/
             }
         }
     }

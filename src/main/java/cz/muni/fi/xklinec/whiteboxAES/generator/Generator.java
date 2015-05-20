@@ -793,29 +793,14 @@ public class Generator {
      * @param xtb 
      */
     public static void generateXorTable(Coding xorCoding, byte[] xtb, Bijection4x4[] bio){
-	for(int b=0; b<256; b++){
+    	for(int b=0; b<256; b++){
             int	bb = b;
             bb = iocoding_encode08x08((byte)bb, xorCoding.IC, true, bio, null);
             bb = HI((byte)bb) ^ LO((byte)bb);
             bb = iocoding_encode08x08((byte)bb, xorCoding.OC, false, bio, null);
             xtb[b] = (byte) bb;
-	}
+		}
     }
-    
-    /**
-     * Generates whole XOR cascade with 32bit input & output argument. No External 
-     * encoding is used thus can be done here.
-     */
-    /*public void generateXorCascades(){
-        final GXORCascade[][] xorMap = AESMap.getXor();
-              XORCascade[][]  xor    = AESi.getXor();
-        
-        for(int r=0; r<AES.ROUNDS; r++){
-            for(int i=0; i<State.COLS; i++){
-                xorMap[r][i].generateTables(xor[r][i], this);
-            }
-        }
-    }*/
     
     /**
      * Generates whole XOR cascade with 128bit input & output argument. 
@@ -883,6 +868,7 @@ public class Generator {
         
         extc = ex;
         
+     // Generate key-dependent S-boxes
         System.out.println("Generating key-dependent S-boxes");
         AESh.createKeyDependentSboxes(key, keySize);
 
@@ -917,7 +903,7 @@ public class Generator {
         generateMixingBijections(io, MB_CNT_08x08_ROUNDS, MB_CNT_32x32_ROUNDS, MB_CNT_128x128_ROUNDS, useMB08x08Identity, useMB32x32Identity, useMB32x32Identity);
         
         // Init T1[0] tables - for the first round
-	System.out.println("Generating first round tables (T1) ");
+        System.out.println("Generating first round tables (T1) ");
         generateT1Tables();
 	
         // Generate round keys
@@ -932,7 +918,6 @@ public class Generator {
         
         // Generate all XOR cascades
         System.out.println("Generating all 32bit XOR tables");
-        //this.generateXorCascades();
         this.generateXorStateCascades();
         this.generateXorState2Cascades();
         this.generateXorState3Cascades();
@@ -941,7 +926,6 @@ public class Generator {
         int i,j,b;
         // pre-load bijections
         final LinearBijection[][] eMB_L08x08 = io.getMB_L08x08();
-        final LinearBijection[][] eMB_MB32x32 = io.getMB_MB32x32();
         final LinearBijection[][] eMB_MB128x128 = io.getMB_MB128x128();
         final GTBox8to128[][] t1C = AESMap.getT1();
         final GTBox8to128[][] t2C  = AESMap.getT2();
@@ -949,7 +933,6 @@ public class Generator {
         final Bijection4x4[] pCoding04x04 = io.getpCoding04x04();
         final Bijection8x8[] pCoding08x08 = null;
         final LinearBijection[] IODM = extc.getIODM();
-        final Bijection4x4[][] lfC   = extc.getLfC();
         
         T1Box[][] t1 = AESi.getT1();
         T2Box[][] t2 = AESi.getT2();
@@ -963,7 +946,7 @@ public class Generator {
         for (int r = 0; r < AES.ROUNDS; r++) {
             System.out.println("Generating tables for round = " + (r + 1));
 
-            // Iterate by mix cols/sections/dual AES-es
+            // Iterate by mix cols/sections
             // i = current column in state matrix
             for (i = 0; i < State.COLS; i++) {
                 //
@@ -1091,7 +1074,6 @@ public class Generator {
                         // SBox transformation with dedicated AES for this round and section
                         // Encryption: ByteSub
                         // Decryption: ByteSubInv
-                        //int tmpE = encrypt ? AESh.ByteSub(tmpGF2E) : AESh.ByteSubInv(tmpGF2E); //Independent S-box
                         int tmpE = encrypt ? AESh.ByteSub(tmpGF2E, r, j) : AESh.ByteSubInv(tmpGF2E, r, j); //Key-dependent S-boxes
                         
                         // Decryption case:
@@ -1131,7 +1113,7 @@ public class Generator {
 
                         //
                         // MDS matrix multiplication, Mixing bijection part
-                        //	only in case 1..9 round
+                        // only in case 1..9 round
                        
                         // Build [0 tmpE 0 0]^T stripe where tmpE is in j-th position
                         GF2mMatrixEx zj = new GF2mMatrixEx(field, 16, 1);
@@ -1139,7 +1121,7 @@ public class Generator {
                         //if(encrypt)
                         	mcres = r < (AES.ROUNDS - 1) ? AESh.getMDS16x16Mat_array()[r].rightMultiply(zj) : zj;
                         //else
-                           // mcres = r < (AES.ROUNDS - 1) ? AESh.getMDS16x16Mat_array()[8-r].rightMultiply(zj) : zj; //[0] - now it uses only one matrix for all rounds - I'm not sure if it would be better to have one MDS matrix for each round
+                           // mcres = r < (AES.ROUNDS - 1) ? AESh.getMDS16x16Mat_array()[8-r].rightMultiply(zj) : zj;
 
                         mPreMB = NTLUtils.GF2mMatrix_to_GF2Matrix_col(mcres, 8);
                         mPreMB = (GF2MatrixEx) eMB_MB128x128[r][0].getMb().rightMultiply(mPreMB); //[r][0] means, that in each round only one MB matrix is used
@@ -1149,10 +1131,12 @@ public class Generator {
                             mapResult128.set(NTLUtils.colBinaryVectorToByte(mPreMB, jj * 8, 0), jj);
                         }
 
+                        // Encode mapResult with out encoding
                         iocoding_encode128x128(mapResult128, mapResult128, t2C[r][idx].getCod(), false, pCoding04x04, pCoding08x08);
-
+                        
+                        // Store result value to lookup table
                         t2[r][idx].getTbl()[b].setState(mapResult128.getState());
-                        }
+                    }
                 }
 
                 // In final round there are no more XOR and T3 boxes
@@ -1178,11 +1162,10 @@ public class Generator {
                         tmpMat.set(idx, 0, bb);
         				mPreMB = NTLUtils.GF2mMatrix_to_GF2Matrix_col(tmpMat, 8);
 
-                        // builds binary matrix [0 0 bb 0], if j==2
-                        //NTLUtils.putByteAsColVector(tmpMat, (byte) bb, (4*i+j) * 8, 0);
                         // Build MB multiplication result
                         mPreMB = (GF2MatrixEx) eMB_MB128x128[r][0].getInv().rightMultiply(mPreMB);
 
+                        // Apply L bijections
                         State mapResult128 = new State();
                         for(int iii = 0; iii<4; iii++) {
 	                        mapResult = 0;
@@ -1196,12 +1179,8 @@ public class Generator {
                         
                             mapResult128.setColumn(wbResult, iii);
                         }
-/*
-                        System.out.println("mapResult128:");
-                        System.out.println(mapResult128);
-*/
+
                         // Encode mapResult with out encoding
-                        //mapResult = iocoding_encode32x32(mapResult, t3C[r][idx].getCod(), false, pCoding04x04, pCoding08x08);
                         iocoding_encode128x128(mapResult128, mapResult128, t3C[r][idx].getCod(), false, pCoding04x04, pCoding08x08);
 
                         // Store result value to lookup table

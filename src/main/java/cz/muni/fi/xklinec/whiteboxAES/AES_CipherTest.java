@@ -28,6 +28,8 @@
 */
 package cz.muni.fi.xklinec.whiteboxAES;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.SecureRandom;
@@ -278,5 +280,44 @@ public class AES_CipherTest extends TestCase {
 
 	        assertEquals("Cipher output mismatch in API, key1", true, cipher2.equals(cipher));
 		}
+	}
+		
+	public void testDataForRandomnessTesting() {
+		System.out.println("Generating data for randomness testing...");
+		byte[] outputEnc = AEShelper.testVect128_plain[0];
+		
+		File outputFile = new File("dataForRandomnessTesting.bin");
+
+		SecureRandom random = new SecureRandom();
+		
+		byte[] keyData = {
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+		};
+		
+		Key key = new SecretKeySpec(keyData, "WBAES");
+
+		try {
+			FileOutputStream fos = new FileOutputStream(outputFile);
+
+			AES_Cipher encryptor = new AES_Cipher();
+			encryptor.engineInit(Cipher.ENCRYPT_MODE, null, random);
+
+			for(int i = 0; i<1000; i++) {
+				outputEnc = encryptor.engineDoFinal(outputEnc, 0, 16);
+				
+				fos.write(outputEnc, 0, 16);
+				//State cipher  = new State(outputEnc, true, false);
+				//System.out.println("Testvector ciphertext comp: \n" + cipher);
+			}
+
+			fos.flush();
+			fos.close();
+		
+			
+		} catch (Exception e) {
+			System.out.println("Exception " + e.getMessage());
+		}
+		
 	}
 }
